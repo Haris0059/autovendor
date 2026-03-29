@@ -1,14 +1,8 @@
-export default function ImageManagerPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ImagesPage() {
   return (
-    <div>
-      <h1 className="mb-6 text-3xl font-bold">Image Manager</h1>
-      <p className="text-muted-foreground">
-        Upload, reorder, and manage listing images — coming soon
-      </p>
+    <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+      <h1 className="text-2xl font-bold">Slike Artikla</h1>
+      <p className="text-muted-foreground">Upload i upravljanje slikama — uskoro</p>
     </div>
   );
 }

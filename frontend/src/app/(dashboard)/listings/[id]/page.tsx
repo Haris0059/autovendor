@@ -1,14 +1,8 @@
-export default function EditListingPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function EditListingPage() {
   return (
-    <div>
-      <h1 className="mb-6 text-3xl font-bold">Edit Listing</h1>
-      <p className="text-muted-foreground">
-        Edit listing details — coming soon
-      </p>
+    <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+      <h1 className="text-2xl font-bold">Uređivanje Artikla</h1>
+      <p className="text-muted-foreground">Uređivanje detalja artikla — uskoro</p>
     </div>
   );
 }

@@ -1,10 +1,8 @@
 export default function SettingsPage() {
   return (
-    <div>
-      <h1 className="mb-6 text-3xl font-bold">Settings</h1>
-      <p className="text-muted-foreground">
-        User preferences, default locations, and account settings — coming soon
-      </p>
+    <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+      <h1 className="text-2xl font-bold">Postavke</h1>
+      <p className="text-muted-foreground">Korisničke postavke i konfiguracija — uskoro</p>
     </div>
   );
 }

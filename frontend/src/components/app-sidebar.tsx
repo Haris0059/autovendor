@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { NavMain } from "@/components/nav-main"
+import { NavSection } from "@/components/nav-section"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
@@ -43,6 +44,13 @@ const data = {
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
     },
+  ],
+  navOlx: [
+    {
+      title: "OLX Profili",
+      url: "/dashboard/accounts",
+      icon: <UsersIcon />,
+    },
     {
       title: "Artikli",
       url: "/listings",
@@ -54,24 +62,26 @@ const data = {
       icon: <PlusCircleIcon />,
     },
     {
-      title: "OLX Postavke",
-      url: "/dashboard/accounts",
-      icon: <UsersIcon />,
-    },
-    {
-      title: "Mapiranje Artikala",
-      url: "/sync/mappings",
-      icon: <MapIcon />,
-    },
-    {
       title: "Kategorije",
       url: "/sync/mappings",
       icon: <TagsIcon />,
     },
     {
+      title: "Sponzorisano",
+      url: "/sponsored",
+      icon: <MegaphoneIcon />,
+    },
+  ],
+  navWoo: [
+    {
       title: "WooCommerce",
       url: "/woocommerce",
       icon: <ShoppingCartIcon />,
+    },
+    {
+      title: "Mapiranje Artikala",
+      url: "/sync/mappings",
+      icon: <MapIcon />,
     },
     {
       title: "Sync",
@@ -82,11 +92,6 @@ const data = {
       title: "Logovi",
       url: "/sync/history",
       icon: <HistoryIcon />,
-    },
-    {
-      title: "Sponzorisano",
-      url: "/sponsored",
-      icon: <MegaphoneIcon />,
     },
   ],
   navSecondary: [
@@ -107,6 +112,7 @@ const data = {
     },
   ],
 }
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -125,6 +131,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <NavSection label="OLX" items={data.navOlx} />
+        <NavSection label="WooCommerce" items={data.navWoo} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

@@ -34,6 +34,7 @@ export function NavMain({
               <span>Novi Artikal</span>
             </SidebarMenuButton>
             <Button
+              nativeButton={false}
               size="icon"
               className="size-8 group-data-[collapsible=icon]:opacity-0"
               variant="outline"

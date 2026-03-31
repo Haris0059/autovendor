@@ -36,6 +36,12 @@ import {
   CheckCircleIcon,
 } from "lucide-react"
 import { AddWebShopDialog } from "@/components/add-webshop-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type WooStore = {
   id: string
@@ -51,6 +57,7 @@ const mockStores: WooStore[] = []
 
 export default function WooCommercePage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("Svi")
   const [perPage, setPerPage] = useState<string>("8")
@@ -78,7 +85,7 @@ export default function WooCommercePage() {
           />
         </div>
 
-        <Button variant="outline" size="icon" className="size-8">
+        <Button variant="outline" size="icon" className="size-8" onClick={() => setInfoDialogOpen(true)}>
           <InfoIcon className="size-4" />
         </Button>
 
@@ -213,6 +220,48 @@ export default function WooCommercePage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
       />
+
+      <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Uputstva za WooCommerce import</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 text-sm text-muted-foreground">
+            <p>
+              Svaki red u tabeli predstavlja jednu konekciju između
+              WooCommerce sajta i OLX profila.
+            </p>
+            <div>
+              <p className="font-semibold text-foreground">Kako početi?</p>
+              <p>
+                Kliknite &quot;+ Dodaj Web Shop&quot; da povežete WooCommerce
+                sajt sa željenim OLX profilom i odaberete interval
+                sinhronizacije.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-foreground">Start / Stop dugme</p>
+              <p>
+                <span className="font-medium text-foreground">Start</span> —
+                pokreće automatsko preuzimanje artikala sa vašeg WooCommerce
+                sajta. Artikli se ažuriraju prema odabranom intervalu.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Stop</span> —
+                zaustavlja preuzimanje podataka sa WooCommerce sajta.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-foreground">Play / Pause dugme</p>
+              <p>Kontroliše objavu artikala na OLX.</p>
+              <p>
+                Kada je aktivno, sistem svake minute objavljuje po 1
+                neobjavljeni artikal sa WooCommerce sajta.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

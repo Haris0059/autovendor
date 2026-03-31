@@ -25,7 +25,6 @@ import {
   HistoryIcon,
   TagsIcon,
   MegaphoneIcon,
-  Settings2Icon,
   CircleHelpIcon,
   SearchIcon,
   StoreIcon,
@@ -96,11 +95,6 @@ const data = {
     },
   ],
   navSecondary: [
-    {
-      title: "Postavke",
-      url: "/settings",
-      icon: <Settings2Icon />,
-    },
     {
       title: "Pomoć",
       url: "#",

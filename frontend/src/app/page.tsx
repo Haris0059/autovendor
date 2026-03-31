@@ -11,8 +11,8 @@ export default function Home() {
           dashboard.
         </p>
         <div className="mt-8 flex gap-4 justify-center">
-          <Button render={<Link href="/login" />}>Login</Button>
-          <Button variant="outline" render={<Link href="/register" />}>
+          <Button nativeButton={false} render={<Link href="/login" />}>Login</Button>
+          <Button nativeButton={false} variant="outline" render={<Link href="/register" />}>
             Register
           </Button>
         </div>

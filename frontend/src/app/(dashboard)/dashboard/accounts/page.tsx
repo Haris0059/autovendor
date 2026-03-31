@@ -117,10 +117,10 @@ export default function AccountsPage() {
                   <TableCell className="text-muted-foreground">{account.lastSync}</TableCell>
                   <TableCell>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
-                          <MoreHorizontalIcon className="size-4" />
-                        </Button>
+                      <DropdownMenuTrigger
+                        render={<Button variant="ghost" size="icon" className="size-8" />}
+                      >
+                        <MoreHorizontalIcon className="size-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem

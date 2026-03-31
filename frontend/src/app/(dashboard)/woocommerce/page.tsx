@@ -35,6 +35,7 @@ import {
   Trash2Icon,
   CheckCircleIcon,
 } from "lucide-react"
+import { AddWebShopDialog } from "@/components/add-webshop-dialog"
 
 type WooStore = {
   id: string
@@ -49,6 +50,7 @@ type WooStore = {
 const mockStores: WooStore[] = []
 
 export default function WooCommercePage() {
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("Svi")
   const [perPage, setPerPage] = useState<string>("8")
@@ -85,7 +87,7 @@ export default function WooCommercePage() {
           Preuzmi plugin
         </Button>
 
-        <Button>
+        <Button onClick={() => setAddDialogOpen(true)}>
           <PlusIcon className="mr-2 size-4" />
           Dodaj Web Shop
         </Button>
@@ -206,6 +208,11 @@ export default function WooCommercePage() {
           </TableBody>
         </Table>
       </div>
+
+      <AddWebShopDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+      />
     </div>
   )
 }

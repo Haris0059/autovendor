@@ -37,6 +37,13 @@ import {
 } from "lucide-react"
 import { AddWebShopDialog } from "@/components/add-webshop-dialog"
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -128,18 +135,26 @@ export default function WooCommercePage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border">
-        <Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Web Shopovi</CardTitle>
+          <CardDescription>
+            {filteredStores.length}{" "}
+            {filteredStores.length === 1 ? "import zapis" : "import zapisa"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-16">R.B</TableHead>
-              <TableHead>OLX PROFIL</TableHead>
-              <TableHead>ENDPOINT</TableHead>
-              <TableHead>STATUS</TableHead>
-              <TableHead>INTERVAL</TableHead>
-              <TableHead>ZADNJA PROVJERA</TableHead>
-              <TableHead>KREIRANO</TableHead>
-              <TableHead className="w-20 text-right">AKCIJE</TableHead>
+              <TableHead>OLX Profil</TableHead>
+              <TableHead>Endpoint</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Interval</TableHead>
+              <TableHead>Zadnja Provjera</TableHead>
+              <TableHead>Kreirano</TableHead>
+              <TableHead className="w-20 text-right">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -213,8 +228,9 @@ export default function WooCommercePage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </div>
+          </Table>
+        </CardContent>
+      </Card>
 
       <AddWebShopDialog
         open={addDialogOpen}

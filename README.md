@@ -55,7 +55,10 @@ Copy `.env.example` and fill in the values:
 - Dashboard with charts, data table, and summary cards
 - Sidebar navigation with SPA client-side routing
 - OLX Profili page (add/edit/remove accounts with modals)
-- Placeholder pages for all planned routes
+- Artikli (listings) page with profile-scoped listings table and toolbar
+- WooCommerce page with web shop connect dialog, import table, and usage info dialog
+- **AutoVendor WooCommerce plugin** — WordPress plugin exposing a read-only REST API and webhooks for product data (see [`wp-plguin/README.md`](wp-plguin/README.md))
+- Placeholder pages for remaining planned routes
 
 ## Planned Features
 
@@ -72,9 +75,10 @@ autovendor/
 │   └── src/
 │       ├── app/
 │       │   ├── (auth)/    # Login, register
-│       │   └── (dashboard)/ # All dashboard routes
-│       ├── components/    # UI components, sidebar, dialogs
+│       │   └── (dashboard)/ # Dashboard, listings, woocommerce, sync, etc.
+│       ├── components/    # UI components, sidebar, dialogs, page-specific
 │       └── providers/     # Theme, query, tooltip providers
+├── wp-plguin/             # AutoVendor WooCommerce plugin (PHP)
 ├── olx-api-docs/          # OLX.ba API documentation
 ├── docker-compose.yml     # PostgreSQL + Redis
 └── .env.example           # Environment variables template

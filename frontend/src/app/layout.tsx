@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OLX Dashboard",
+  title: "AutoVendor",
   description:
-    "Manage OLX.ba listings and sync with WooCommerce from a single dashboard.",
+    "Upravljajte OLX.ba artiklima i sinhronizacijom sa WooCommerce prodavnicom iz jedne kontrolne table.",
 };
 
 export default function RootLayout({

@@ -39,9 +39,7 @@ final class AutoVendor_Endpoint
         add_action('woocommerce_trash_product', [$this, 'on_product_deleted'], 10, 1);
     }
 
-    // ──────────────────────────────────────────────
     // Lifecycle
-    // ──────────────────────────────────────────────
 
     public function activate()
     {
@@ -74,9 +72,8 @@ final class AutoVendor_Endpoint
         return $schedules;
     }
 
-    // ──────────────────────────────────────────────
+    
     // Auth
-    // ──────────────────────────────────────────────
 
     public function maybe_generate_api_key()
     {
@@ -100,9 +97,8 @@ final class AutoVendor_Endpoint
         return $provided !== '' && hash_equals($stored, $provided);
     }
 
-    // ──────────────────────────────────────────────
+    
     // REST Routes
-    // ──────────────────────────────────────────────
 
     public function register_routes()
     {
@@ -186,9 +182,8 @@ final class AutoVendor_Endpoint
         ]);
     }
 
-    // ──────────────────────────────────────────────
+    
     // Product queries
-    // ──────────────────────────────────────────────
 
     private function query_products(WP_REST_Request $request, $default_per_page = null)
     {
@@ -221,9 +216,8 @@ final class AutoVendor_Endpoint
         return wc_get_products($args);
     }
 
-    // ──────────────────────────────────────────────
+    
     // Endpoint handlers
-    // ──────────────────────────────────────────────
 
     public function get_catalog(WP_REST_Request $request)
     {
@@ -317,9 +311,8 @@ final class AutoVendor_Endpoint
         return rest_ensure_response($this->get_attributes());
     }
 
-    // ──────────────────────────────────────────────
+    
     // Product mapping
-    // ──────────────────────────────────────────────
 
     private function map_product(WC_Product $product)
     {
@@ -431,9 +424,9 @@ final class AutoVendor_Endpoint
         ];
     }
 
-    // ──────────────────────────────────────────────
+    
     // Images
-    // ──────────────────────────────────────────────
+    
 
     private function get_product_images(WC_Product $product)
     {
@@ -466,9 +459,8 @@ final class AutoVendor_Endpoint
         return $images;
     }
 
-    // ──────────────────────────────────────────────
+    
     // Content hashing
-    // ──────────────────────────────────────────────
 
     private function normalize_text($value)
     {
@@ -512,9 +504,9 @@ final class AutoVendor_Endpoint
         return hash('sha256', $json ?: '');
     }
 
-    // ──────────────────────────────────────────────
+    
     // Taxonomy helpers
-    // ──────────────────────────────────────────────
+    
 
     private function get_categories()
     {
@@ -591,9 +583,8 @@ final class AutoVendor_Endpoint
         return $attributes;
     }
 
-    // ──────────────────────────────────────────────
+    
     // Webhooks — notify AutoVendor on product changes
-    // ──────────────────────────────────────────────
 
     public function on_product_created($product_id, $product)
     {
@@ -634,9 +625,8 @@ final class AutoVendor_Endpoint
         ]);
     }
 
-    // ──────────────────────────────────────────────
-    // Heartbeat
-    // ──────────────────────────────────────────────
+    
+    // Heartbeat/
 
     public function send_heartbeat($status = 'active')
     {
@@ -661,9 +651,9 @@ final class AutoVendor_Endpoint
         return !empty($data['Version']) ? $data['Version'] : '1.0.0';
     }
 
-    // ──────────────────────────────────────────────
+    
     // Admin settings page
-    // ──────────────────────────────────────────────
+    
 
     public function add_settings_page()
     {

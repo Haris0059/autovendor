@@ -176,7 +176,7 @@ export default function DashboardPage() {
               <CardContent>
                 <Progress value={pct}>
                   <ProgressLabel>Iskorišteno</ProgressLabel>
-                  <ProgressValue>{pct}%</ProgressValue>
+                  <ProgressValue>{() => `${pct}%`}</ProgressValue>
                   <ProgressTrack>
                     <ProgressIndicator />
                   </ProgressTrack>

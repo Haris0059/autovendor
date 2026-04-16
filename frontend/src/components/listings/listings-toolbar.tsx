@@ -1,24 +1,27 @@
-"use client"
+"use client";
 
-import { Input } from "@/components/ui/input"
+import Link from "next/link";
+import { PlusIcon, SearchIcon, UserIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { SearchIcon, UserIcon } from "lucide-react"
-import type { OlxAccount } from "@/types/olx"
+} from "@/components/ui/select";
+import type { OlxAccount } from "@/types/olx";
 
 interface ListingsToolbarProps {
-  accounts: OlxAccount[]
-  activeAccountId: number | null
-  onAccountChange: (id: number) => void
-  search: string
-  onSearchChange: (value: string) => void
-  perPage: string
-  onPerPageChange: (value: string) => void
+  accounts: OlxAccount[];
+  activeAccountId: number | null;
+  onAccountChange: (id: number) => void;
+  search: string;
+  onSearchChange: (value: string) => void;
+  perPage: string;
+  onPerPageChange: (value: string) => void;
 }
 
 export function ListingsToolbar({
@@ -77,7 +80,11 @@ export function ListingsToolbar({
             <SelectItem value="50">50</SelectItem>
           </SelectContent>
         </Select>
+        <Button render={<Link href="/listings/new" />}>
+          <PlusIcon />
+          Novi artikal
+        </Button>
       </div>
     </div>
-  )
+  );
 }

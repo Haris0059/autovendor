@@ -36,7 +36,7 @@ const sponsorSchema = z.object({
   type: z.enum(["1", "2"]), // 1: Category, 2: Global
   days: z.string().min(1),
   refresh_every: z.string().min(1),
-  homepage: z.boolean().default(false),
+  homepage: z.boolean(),
 })
 
 type SponsorFormValues = z.infer<typeof sponsorSchema>
@@ -126,7 +126,7 @@ export function SponsorDialog({
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label>Tip sponzorstva</Label>
-            <Select value={type} onValueChange={(v) => form.setValue("type", v as "1" | "2")}>
+            <Select value={type} onValueChange={(v) => form.setValue("type", (v as "1" | "2") ?? "1")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -140,7 +140,7 @@ export function SponsorDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label>Trajanje (dana)</Label>
-              <Select value={days} onValueChange={(v) => form.setValue("days", v)}>
+              <Select value={days} onValueChange={(v) => form.setValue("days", v ?? "7")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -153,7 +153,7 @@ export function SponsorDialog({
             </div>
             <div className="grid gap-2">
               <Label>Automatsko obnavljanje</Label>
-              <Select value={refresh_every} onValueChange={(v) => form.setValue("refresh_every", v)}>
+              <Select value={refresh_every} onValueChange={(v) => form.setValue("refresh_every", v ?? "0")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

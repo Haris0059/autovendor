@@ -72,10 +72,13 @@ export default function SyncHistoryPage() {
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline" size="icon" className="size-8">
-          <Link href="/sync">
-            <ArrowLeftIcon className="size-4" />
-          </Link>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="size-8"
+          render={<Link href="/sync" />}
+        >
+          <ArrowLeftIcon className="size-4" />
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">Historija sinhronizacije</h1>
       </div>
@@ -90,7 +93,7 @@ export default function SyncHistoryPage() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
                 <SelectTrigger className="w-[140px] h-9">
                   <FilterIcon className="mr-2 size-3 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
@@ -103,7 +106,7 @@ export default function SyncHistoryPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={storeFilter} onValueChange={setStoreFilter}>
+              <Select value={storeFilter} onValueChange={(v) => setStoreFilter(v ?? "all")}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Shop" />
                 </SelectTrigger>
@@ -115,7 +118,7 @@ export default function SyncHistoryPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={accountFilter} onValueChange={setAccountFilter}>
+              <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v ?? "all")}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Profil" />
                 </SelectTrigger>
@@ -212,7 +215,7 @@ export default function SyncHistoryPage() {
             </TableBody>
           </Table>
 
-          {history && history.total_pages > 1 && (
+          {history && history.last_page > 1 && (
             <div className="mt-4 flex items-center justify-center gap-2">
               <Button
                 variant="outline"
@@ -223,13 +226,13 @@ export default function SyncHistoryPage() {
                 Prethodna
               </Button>
               <span className="text-sm text-muted-foreground">
-                Stranica {page} od {history.total_pages}
+                Stranica {page} od {history.last_page}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(p => Math.min(history.total_pages, p + 1))}
-                disabled={page === history.total_pages}
+                onClick={() => setPage(p => Math.min(history.last_page, p + 1))}
+                disabled={page === history.last_page}
               >
                 Sljedeća
               </Button>

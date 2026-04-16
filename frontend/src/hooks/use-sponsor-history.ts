@@ -3,7 +3,7 @@ import { api } from "@/lib/api-client"
 import { USE_MOCKS, mockDelay } from "@/lib/mocks"
 
 export function useSponsorHistory(accountId?: number) {
-  return useQuery({
+  return useQuery<{ month: string; credits: number; active_sponsors: number }[]>({
     queryKey: ["analytics", "sponsors", accountId],
     queryFn: async () => {
       if (USE_MOCKS) {

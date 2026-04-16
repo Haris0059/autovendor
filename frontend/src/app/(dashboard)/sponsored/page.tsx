@@ -266,9 +266,9 @@ export default function SponsoredPage() {
         onConfirm={handleEndSponsor}
         title="Prekini sponzorstvo?"
         description="Ova akcija će odmah prekinuti sponzorstvo artikla. Preostali krediti neće biti vraćeni."
-        confirmText="Prekini"
-        variant="destructive"
-        isLoading={endSponsor.isPending}
+        confirmLabel="Prekini"
+        destructive
+        loading={endSponsor.isPending}
       />
 
       <ConfirmDialog
@@ -277,9 +277,9 @@ export default function SponsoredPage() {
         onConfirm={handleEndDiscount}
         title="Prekini sniženje?"
         description="Artikal će se vratiti na originalnu cijenu na OLX.ba."
-        confirmText="Prekini"
-        variant="destructive"
-        isLoading={endDiscount.isPending}
+        confirmLabel="Prekini"
+        destructive
+        loading={endDiscount.isPending}
       />
     </div>
   )

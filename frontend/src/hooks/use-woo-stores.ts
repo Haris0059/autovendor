@@ -6,9 +6,13 @@ import {
   mockWooProducts,
   mockWooCategories,
   mockWooAttributes,
-  type MockWooAttribute,
 } from "@/lib/mocks/woo";
-import type { WooStore, WooProduct, WooCategory } from "@/types/woocommerce";
+import type { 
+  WooStore, 
+  WooProduct, 
+  WooCategory, 
+  WooAttribute 
+} from "@/types/woocommerce";
 
 let mockStoresList: WooStore[] = [...mockWooStores];
 let nextStoreId = 1000;
@@ -69,7 +73,7 @@ export function useWooStoreAttributes(storeId: number) {
     queryKey: ["woo-stores", storeId, "attributes"],
     queryFn: () => {
       if (USE_MOCKS) return mockDelay(mockWooAttributes);
-      return api.get<MockWooAttribute[]>(`/woo/stores/${storeId}/attributes`);
+      return api.get<WooAttribute[]>(`/woo/stores/${storeId}/attributes`);
     },
     enabled: !!storeId,
   });

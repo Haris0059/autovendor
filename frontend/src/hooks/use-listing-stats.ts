@@ -3,7 +3,11 @@ import { api } from "@/lib/api-client"
 import { USE_MOCKS, mockDelay } from "@/lib/mocks"
 
 export function useListingStats(accountId?: number) {
-  return useQuery({
+  return useQuery<{
+    history: { date: string; active: number; drafts: number; finished: number }[];
+    categories: { name: string; count: number; value: number }[];
+    distribution: { name: string; value: number; color: string }[];
+  }>({
     queryKey: ["analytics", "listings", accountId],
     queryFn: async () => {
       if (USE_MOCKS) {

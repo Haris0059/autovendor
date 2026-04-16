@@ -39,6 +39,25 @@ export function OlxStatusBadge({ status }: { status: string }) {
   );
 }
 
+export function StatusBadge({ status }: { status: "active" | "inactive" | "pending" | string }) {
+  const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    active: "default",
+    inactive: "destructive",
+    pending: "outline",
+  };
+  const labels: Record<string, string> = {
+    active: "Aktivan",
+    inactive: "Neaktivan",
+    pending: "Na čekanju",
+  };
+
+  return (
+    <Badge variant={variants[status] ?? "outline"}>
+      {labels[status] ?? status}
+    </Badge>
+  );
+}
+
 type SyncStatus = "success" | "failed" | "skipped" | "pending";
 
 const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {

@@ -26,11 +26,13 @@ interface BulkActionBarProps {
   onClear: () => void;
 }
 
+type ToastKey = Extract<keyof typeof toastMessages, string>
+
 const ACTIONS: {
   key: ListingAction;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  toastKey: keyof typeof toastMessages;
+  toastKey: ToastKey;
 }[] = [
   {
     key: "publish",
@@ -53,11 +55,11 @@ export function BulkActionBar({ selectedIds, onClear }: BulkActionBarProps) {
   const remove = useDeleteListing();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const runAction = async (key: ListingAction, toastKey: keyof typeof toastMessages) => {
+  const runAction = async (key: ListingAction, toastKey: ToastKey) => {
     for (const id of selectedIds) {
       await action.mutateAsync({ id, action: key });
     }
-    toast.success(toastMessages[toastKey]);
+    toast.success(toastMessages[toastKey] as string);
     onClear();
   };
 

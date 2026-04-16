@@ -24,4 +24,23 @@ export const toastMessages = {
   errorDelete: "Greška pri brisanju.",
   unauthorized: "Nemate dozvolu.",
   networkError: "Provjerite internet konekciju.",
+  
+  // Structured messages for better organization
+  sync: {
+    linkSuccess: "Artikli su uspješno povezani.",
+    linkError: "Greška pri povezivanju artikala.",
+    mappingCreateSuccess: "Mapiranje kategorija je uspješno kreirano.",
+    mappingCreateError: "Greška pri kreiranju mapiranja.",
+    mappingDeleteSuccess: "Mapiranje kategorija je uspješno obrisano.",
+    mappingDeleteError: "Greška pri brisanju mapiranja.",
+  },
+  
+  woo: {
+    createSuccess: "WooCommerce shop je uspješno dodat.",
+    createError: "Greška pri dodavanju shopa.",
+    updateSuccess: "Postavke shopa su ažurirane.",
+    updateError: "Greška pri ažuriranju postavki.",
+    deleteSuccess: "WooCommerce shop je uklonjen.",
+    deleteError: "Greška pri uklanjanju shopa.",
+  }
 } as const;

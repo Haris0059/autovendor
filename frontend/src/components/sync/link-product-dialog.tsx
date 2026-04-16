@@ -115,7 +115,7 @@ export function LinkProductDialog({
               <Label>WooCommerce Shop</Label>
               <Select 
                 value={form.watch("woo_store_id")} 
-                onValueChange={(v) => form.setValue("woo_store_id", v)}
+                onValueChange={(v) => form.setValue("woo_store_id", v ?? "")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Odaberi shop" />
@@ -131,7 +131,7 @@ export function LinkProductDialog({
               <Label>OLX Profil</Label>
               <Select 
                 value={form.watch("olx_account_id")} 
-                onValueChange={(v) => form.setValue("olx_account_id", v)}
+                onValueChange={(v) => form.setValue("olx_account_id", v ?? "")}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Odaberi profil" />
@@ -153,7 +153,7 @@ export function LinkProductDialog({
               </Label>
               <Select 
                 value={form.watch("woo_product_id")} 
-                onValueChange={(v) => form.setValue("woo_product_id", v)}
+                onValueChange={(v) => form.setValue("woo_product_id", v ?? "")}
                 disabled={!selectedStoreId || wooLoading}
               >
                 <SelectTrigger>
@@ -180,7 +180,7 @@ export function LinkProductDialog({
               </Label>
               <Select 
                 value={form.watch("olx_listing_id")} 
-                onValueChange={(v) => form.setValue("olx_listing_id", v)}
+                onValueChange={(v) => form.setValue("olx_listing_id", v ?? "")}
                 disabled={!selectedAccountId || listingsLoading}
               >
                 <SelectTrigger>

@@ -20,8 +20,8 @@ import { toast } from "sonner"
 import { Loader2Icon, TagIcon, InfoIcon, TrendingDownIcon } from "lucide-react"
 
 const discountSchema = z.object({
-  original_price: z.coerce.number().positive("Cijena mora biti pozitivan broj"),
-  discount_price: z.coerce.number().positive("Snižena cijena mora biti pozitivan broj"),
+  original_price: z.number().positive("Cijena mora biti pozitivan broj"),
+  discount_price: z.number().positive("Snižena cijena mora biti pozitivan broj"),
   days: z.enum(["3", "7", "30"]),
 }).refine((data) => data.discount_price < data.original_price, {
   message: "Snižena cijena mora biti manja od originalne",
@@ -100,7 +100,7 @@ export function DiscountDialog({
                   id="original_price"
                   type="number"
                   step="0.01"
-                  {...form.register("original_price")}
+                  {...form.register("original_price", { valueAsNumber: true })}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">KM</span>
               </div>
@@ -115,7 +115,7 @@ export function DiscountDialog({
                   id="discount_price"
                   type="number"
                   step="0.01"
-                  {...form.register("discount_price")}
+                  {...form.register("discount_price", { valueAsNumber: true })}
                   className="border-red-200 focus-visible:ring-red-500"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-bold">KM</span>

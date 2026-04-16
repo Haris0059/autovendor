@@ -207,21 +207,21 @@ export default function WooCommercePage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                          >
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                            >
+                              <MoreHorizontalIcon className="size-4" />
+                            </Button>
+                          }
+                        />
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/woocommerce/${store.id}`}>
+                          <DropdownMenuItem render={<Link href={`/woocommerce/${store.id}`} />}>
                               <PencilIcon className="mr-2 size-4" />
                               Uredi
-                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             variant="destructive"
@@ -252,9 +252,9 @@ export default function WooCommercePage() {
         onConfirm={handleDelete}
         title="Obriši Web Shop?"
         description="Ova akcija će trajno ukloniti konekciju sa ovim WooCommerce shopom. Sva mapiranja povezana sa ovim shopom će biti obrisana."
-        confirmText="Obriši"
-        variant="destructive"
-        isLoading={deleteStore.isPending}
+        confirmLabel="Obriši"
+        destructive
+        loading={deleteStore.isPending}
       />
 
       <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>

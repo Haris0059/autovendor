@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+          <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "all")}>
             <SelectTrigger className="w-[180px] h-9">
               <UsersIcon className="mr-2 size-3 text-muted-foreground" />
               <SelectValue placeholder="Svi profili" />
@@ -80,30 +80,30 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Ukupno obnova"
+          label="Ukupno obnova"
           value={refresh?.reduce((acc: number, curr: { count: number }) => acc + curr.count, 0) || 0}
-          description="Zadnjih 14 dana"
+          hint="Zadnjih 14 dana"
           icon={<BarChart3Icon className="size-4 text-muted-foreground" />}
-          loading={refreshLoading}
+          isLoading={refreshLoading}
         />
         <StatCard
-          title="Potrošeno kredita"
+          label="Potrošeno kredita"
           value={sponsors?.reduce((acc: number, curr: { credits: number }) => acc + curr.credits, 0) || 0}
-          description="Zadnjih 6 mjeseci"
+          hint="Zadnjih 6 mjeseci"
           icon={<ZapIcon className="size-4 text-yellow-500" />}
-          loading={sponsorsLoading}
+          isLoading={sponsorsLoading}
         />
         <StatCard
-          title="Aktivnih oglasa"
+          label="Aktivnih oglasa"
           value={stats?.history[stats.history.length - 1]?.active || 0}
-          description="Trenutni status"
+          hint="Trenutni status"
           icon={<TrendingUpIcon className="size-4 text-green-500" />}
-          loading={statsLoading}
+          isLoading={statsLoading}
         />
         <StatCard
-          title="Novi oglasi"
+          label="Novi oglasi"
           value={12}
-          description="Ovaj mjesec"
+          hint="Ovaj mjesec"
           icon={<BarChart3Icon className="size-4 text-blue-500" />}
         />
       </div>

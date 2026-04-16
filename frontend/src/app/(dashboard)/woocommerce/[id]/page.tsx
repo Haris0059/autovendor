@@ -92,8 +92,8 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <p className="text-muted-foreground">Prodavnica nije pronađena.</p>
-        <Button asChild variant="outline">
-          <Link href="/woocommerce">Nazad na listu</Link>
+        <Button variant="outline" render={<Link href="/woocommerce" />}>
+          Nazad na listu
         </Button>
       </div>
     )
@@ -102,10 +102,8 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline" size="icon" className="size-8">
-          <Link href="/woocommerce">
-            <ChevronLeftIcon className="size-4" />
-          </Link>
+        <Button variant="outline" size="icon" className="size-8" render={<Link href="/woocommerce" />}>
+          <ChevronLeftIcon className="size-4" />
         </Button>
         <div className="flex flex-col">
           <h1 className="text-xl font-bold tracking-tight">{store.name}</h1>
@@ -377,13 +375,13 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
                         <TableCell className="font-medium">{attr.name}</TableCell>
                         <TableCell className="max-w-md">
                           <div className="flex flex-wrap gap-1">
-                            {attr.options?.map((opt) => (
+                            {attr.options?.map((opt: string) => (
                               <Badge key={opt} variant="outline" className="text-[10px]">
                                 {opt}
                               </Badge>
                             )) || (
                               <span className="text-xs text-muted-foreground">
-                                {attr.terms?.map(t => t.name).join(", ")}
+                                {attr.terms?.map((t: { name: string }) => t.name).join(", ")}
                               </span>
                             )}
                           </div>

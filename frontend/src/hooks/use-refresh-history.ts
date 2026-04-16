@@ -3,7 +3,7 @@ import { api } from "@/lib/api-client"
 import { USE_MOCKS, mockDelay } from "@/lib/mocks"
 
 export function useRefreshHistory(accountId?: number) {
-  return useQuery({
+  return useQuery<{ date: string; count: number; budget_used: number }[]>({
     queryKey: ["analytics", "refresh", accountId],
     queryFn: async () => {
       if (USE_MOCKS) {

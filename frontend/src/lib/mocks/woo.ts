@@ -1,4 +1,4 @@
-import type { WooStore, WooProduct, WooCategory } from "@/types/woocommerce";
+import type { WooStore, WooProduct, WooCategory, WooAttribute } from "@/types/woocommerce";
 
 export const mockWooStores: WooStore[] = [
   {
@@ -16,20 +16,17 @@ export const mockWooStores: WooStore[] = [
 ];
 
 export const mockWooCategories: WooCategory[] = [
-  { id: 10, name: "Auto dijelovi", slug: "auto-dijelovi", parent: 0 },
-  { id: 11, name: "Motor", slug: "motor", parent: 10 },
-  { id: 12, name: "Karoserija", slug: "karoserija", parent: 10 },
-  { id: 20, name: "Mobiteli", slug: "mobiteli", parent: 0 },
-  { id: 21, name: "Android", slug: "android", parent: 20 },
-  { id: 22, name: "iPhone", slug: "iphone", parent: 20 },
-  { id: 30, name: "Bijela tehnika", slug: "bijela-tehnika", parent: 0 },
+  { id: 10, name: "Auto dijelovi", slug: "auto-dijelovi", parent: 0, count: 45 },
+  { id: 11, name: "Motor", slug: "motor", parent: 10, count: 12 },
+  { id: 12, name: "Karoserija", slug: "karoserija", parent: 10, count: 8 },
+  { id: 20, name: "Mobiteli", slug: "mobiteli", parent: 0, count: 32 },
+  { id: 21, name: "Android", slug: "android", parent: 20, count: 15 },
+  { id: 22, name: "iPhone", slug: "iphone", parent: 20, count: 17 },
+  { id: 30, name: "Bijela tehnika", slug: "bijela-tehnika", parent: 0, count: 10 },
 ];
 
-interface MockWooProduct extends WooProduct {
+export interface MockWooProduct extends WooProduct {
   store_id: number;
-  sku: string;
-  stock_status: "instock" | "outofstock";
-  stock_qty: number | null;
 }
 
 export const mockWooProducts: MockWooProduct[] = [
@@ -42,6 +39,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "1499",
     regular_price: "1599",
     sale_price: "1499",
+    currency: "KM",
     description: "Refurbished, pun garancijski period.",
     short_description: "Refurbished iPhone 13 Pro 256GB",
     categories: [mockWooCategories[3], mockWooCategories[5]],
@@ -50,7 +48,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "IPH13P-256-REF",
     stock_status: "instock",
-    stock_qty: 3,
+    stock_quantity: 3,
   },
   {
     id: 1002,
@@ -61,6 +59,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "2399",
     regular_price: "2399",
     sale_price: "",
+    currency: "KM",
     description: "Potpuno nov, zapakovan.",
     short_description: "Samsung flagship 2024",
     categories: [mockWooCategories[3], mockWooCategories[4]],
@@ -69,7 +68,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "SAMS-S24U",
     stock_status: "instock",
-    stock_qty: 8,
+    stock_quantity: 8,
   },
   {
     id: 1003,
@@ -80,6 +79,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "1299",
     regular_price: "1299",
     sale_price: "",
+    currency: "KM",
     description: "Apple iPad Air 5. generacija.",
     short_description: "iPad Air 5",
     categories: [mockWooCategories[3]],
@@ -88,7 +88,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "APL-IPAIR5-256",
     stock_status: "outofstock",
-    stock_qty: 0,
+    stock_quantity: 0,
   },
   {
     id: 1004,
@@ -99,6 +99,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "1450",
     regular_price: "1550",
     sale_price: "1450",
+    currency: "KM",
     description: "Samsung QLED 4K 2024.",
     short_description: "55-inčni QLED TV",
     categories: [mockWooCategories[6]],
@@ -107,7 +108,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "SAMS-TV55Q",
     stock_status: "instock",
-    stock_qty: 5,
+    stock_quantity: 5,
   },
   {
     id: 2001,
@@ -118,6 +119,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "195",
     regular_price: "195",
     sale_price: "",
+    currency: "KM",
     description: "Alternator Bosch za VAG grupu 2.0 TDI.",
     short_description: "Alternator 2.0 TDI",
     categories: [mockWooCategories[0], mockWooCategories[1]],
@@ -126,7 +128,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "ALT-BOSCH-525",
     stock_status: "instock",
-    stock_qty: 12,
+    stock_quantity: 12,
   },
   {
     id: 2002,
@@ -137,6 +139,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "135",
     regular_price: "135",
     sale_price: "",
+    currency: "KM",
     description: "Desni retrovizor za BMW E60.",
     short_description: "Retrovizor E60",
     categories: [mockWooCategories[0], mockWooCategories[2]],
@@ -145,7 +148,7 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "RETR-E60-D",
     stock_status: "instock",
-    stock_qty: 2,
+    stock_quantity: 2,
   },
   {
     id: 2003,
@@ -156,6 +159,7 @@ export const mockWooProducts: MockWooProduct[] = [
     price: "340",
     regular_price: "340",
     sale_price: "",
+    currency: "KM",
     description: "Turbina za 1.9 TDI, regenerisana.",
     short_description: "Turbina 1.9 TDI",
     categories: [mockWooCategories[0], mockWooCategories[1]],
@@ -164,22 +168,19 @@ export const mockWooProducts: MockWooProduct[] = [
     ],
     sku: "TURB-19-TDI",
     stock_status: "outofstock",
-    stock_qty: 0,
+    stock_quantity: 0,
   },
 ];
 
-export interface MockWooAttribute {
-  id: number;
-  name: string;
-  slug: string;
-  terms: { id: number; name: string; slug: string }[];
-}
-
-export const mockWooAttributes: MockWooAttribute[] = [
+export const mockWooAttributes: WooAttribute[] = [
   {
     id: 1,
     name: "Boja",
     slug: "boja",
+    type: "select",
+    order_by: "menu_order",
+    has_archives: true,
+    variation: true,
     terms: [
       { id: 11, name: "Crna", slug: "crna" },
       { id: 12, name: "Bijela", slug: "bijela" },
@@ -190,6 +191,10 @@ export const mockWooAttributes: MockWooAttribute[] = [
     id: 2,
     name: "Veličina",
     slug: "velicina",
+    type: "select",
+    order_by: "menu_order",
+    has_archives: true,
+    variation: true,
     terms: [
       { id: 21, name: "S", slug: "s" },
       { id: 22, name: "M", slug: "m" },

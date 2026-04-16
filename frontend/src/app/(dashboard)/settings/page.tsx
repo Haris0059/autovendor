@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { data: user } = useAuth()
   const { theme, setTheme } = useTheme()
   const [loading, setLoading] = useState(false)
 

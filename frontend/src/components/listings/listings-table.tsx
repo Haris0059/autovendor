@@ -72,11 +72,13 @@ function formatDate(value: string): string {
   }
 }
 
+type ToastKey = Extract<keyof typeof toastMessages, string>
+
 const ROW_ACTIONS: {
   key: ListingAction;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  toastKey: keyof typeof toastMessages;
+  toastKey: ToastKey;
 }[] = [
   {
     key: "publish",
@@ -132,12 +134,12 @@ export function ListingsTable({
   const runAction = (
     listing: OlxListing,
     key: ListingAction,
-    toastKey: keyof typeof toastMessages
+    toastKey: ToastKey
   ) => {
     action.mutate(
       { id: listing.id, action: key },
       {
-        onSuccess: () => toast.success(toastMessages[toastKey]),
+        onSuccess: () => toast.success(toastMessages[toastKey] as string),
         onError: (err) =>
           toast.error(err.message || toastMessages.error),
       }

@@ -54,17 +54,17 @@ const schema = z.object({
   description: z.string().optional(),
   listing_type: z.enum(["sell", "buy", "rent"]),
   state: z.enum(["new", "used"]),
-  price: z.coerce.number().min(0, "Cijena ne može biti negativna.").optional(),
+  price: z.number().min(0, "Cijena ne može biti negativna.").optional(),
   sku_number: z.string().optional(),
   available: z.boolean(),
-  top_category_id: z.coerce.number().optional(),
-  category_id: z.coerce.number().optional(),
-  brand_id: z.coerce.number().optional(),
-  model_id: z.coerce.number().optional(),
-  country_id: z.coerce.number().optional(),
-  state_id: z.coerce.number().optional(),
-  canton_id: z.coerce.number().optional(),
-  city_id: z.coerce.number().optional(),
+  top_category_id: z.number().optional(),
+  category_id: z.number().optional(),
+  brand_id: z.number().optional(),
+  model_id: z.number().optional(),
+  country_id: z.number().optional(),
+  state_id: z.number().optional(),
+  canton_id: z.number().optional(),
+  city_id: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -277,7 +277,7 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                     min={0}
                     step="0.01"
                     placeholder="0.00"
-                    {...register("price")}
+                    {...register("price", { valueAsNumber: true })}
                   />
                   <FieldError
                     errors={errors.price ? [errors.price] : undefined}

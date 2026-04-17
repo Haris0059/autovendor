@@ -41,9 +41,9 @@ import { toast } from "sonner"
 
 export default function SyncHistoryPage() {
   const [page, setPage] = useState(1)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [storeFilter, setStoreFilter] = useState<string>("all")
-  const [accountFilter, setAccountFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("Svi statusi")
+  const [storeFilter, setStoreFilter] = useState<string>("Svi shopovi")
+  const [accountFilter, setAccountFilter] = useState<string>("Svi profili")
 
   const { data: stores } = useWooStores()
   const { data: accounts } = useOlxAccounts()
@@ -52,9 +52,9 @@ export default function SyncHistoryPage() {
   const { data: history, isLoading } = useSyncHistory({
     page,
     per_page: 20,
-    status: statusFilter === "all" ? undefined : statusFilter,
-    store_id: storeFilter === "all" ? undefined : parseInt(storeFilter),
-    account_id: accountFilter === "all" ? undefined : parseInt(accountFilter),
+    status: statusFilter === "Svi statusi" ? undefined : statusFilter,
+    store_id: storeFilter === "Svi shopovi" ? undefined : parseInt(storeFilter),
+    account_id: accountFilter === "Svi profili" ? undefined : parseInt(accountFilter),
   })
 
   const handleRetry = (linkId: number) => {
@@ -93,37 +93,37 @@ export default function SyncHistoryPage() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "all")}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "Svi statusi")}>
                 <SelectTrigger className="w-[140px] h-9">
                   <FilterIcon className="mr-2 size-3 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Svi statusi</SelectItem>
+                  <SelectItem value="Svi statusi">Svi statusi</SelectItem>
                   <SelectItem value="success">Uspješno</SelectItem>
                   <SelectItem value="failed">Greška</SelectItem>
                   <SelectItem value="pending">Na čekanju</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select value={storeFilter} onValueChange={(v) => setStoreFilter(v ?? "all")}>
+              <Select value={storeFilter} onValueChange={(v) => setStoreFilter(v ?? "Svi shopovi")}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Shop" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Svi shopovi</SelectItem>
+                  <SelectItem value="Svi shopovi">Svi shopovi</SelectItem>
                   {stores?.map(s => (
                     <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
-              <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v ?? "all")}>
+              <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v ?? "Svi profili")}>
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Profil" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Svi profili</SelectItem>
+                  <SelectItem value="Svi profili">Svi profili</SelectItem>
                   {accounts?.map(a => (
                     <SelectItem key={a.id} value={a.id.toString()}>{a.username}</SelectItem>
                   ))}
@@ -131,9 +131,9 @@ export default function SyncHistoryPage() {
               </Select>
 
               <Button variant="outline" size="sm" onClick={() => {
-                setStatusFilter("all")
-                setStoreFilter("all")
-                setAccountFilter("all")
+                setStatusFilter("Svi statusi")
+                setStoreFilter("Svi shopovi")
+                setAccountFilter("Svi profili")
                 setPage(1)
               }}>
                 Poništi

@@ -10,9 +10,14 @@ function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 
-function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
+function AlertDialogTrigger({ render, ...props }: AlertDialogPrimitive.Trigger.Props) {
   return (
-    <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
+    <AlertDialogPrimitive.Trigger
+      data-slot="alert-dialog-trigger"
+      render={render}
+      nativeButton={render ? false : props.nativeButton}
+      {...props}
+    />
   )
 }
 
@@ -158,14 +163,17 @@ function AlertDialogCancel({
   className,
   variant = "outline",
   size = "default",
+  render,
   ...props
 }: AlertDialogPrimitive.Close.Props &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  const comp = render || <Button variant={variant} size={size} />
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={cn(className)}
-      render={<Button variant={variant} size={size} />}
+      render={comp}
+      nativeButton={comp ? false : props.nativeButton}
       {...props}
     />
   )

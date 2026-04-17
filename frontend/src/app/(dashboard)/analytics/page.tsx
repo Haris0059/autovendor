@@ -34,10 +34,10 @@ import {
 import { StatCard } from "@/components/shared/stat-card"
 
 export default function AnalyticsPage() {
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("all")
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("Svi profili")
   const { data: accounts } = useOlxAccounts()
   
-  const accountId = selectedAccountId === "all" ? undefined : parseInt(selectedAccountId)
+  const accountId = selectedAccountId === "Svi profili" ? undefined : parseInt(selectedAccountId)
   
   const { data: stats, isLoading: statsLoading } = useListingStats(accountId)
   const { data: refresh, isLoading: refreshLoading } = useRefreshHistory(accountId)
@@ -53,13 +53,13 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "all")}>
+          <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "Svi profili")}>
             <SelectTrigger className="w-[180px] h-9">
               <UsersIcon className="mr-2 size-3 text-muted-foreground" />
               <SelectValue placeholder="Svi profili" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Svi profili</SelectItem>
+              <SelectItem value="Svi profili">Svi profili</SelectItem>
               {accounts?.map(a => (
                 <SelectItem key={a.id} value={a.id.toString()}>{a.username}</SelectItem>
               ))}

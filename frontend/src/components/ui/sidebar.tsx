@@ -516,7 +516,10 @@ function SidebarMenuButton({
       {
         className: cn(sidebarMenuButtonVariants({ variant, size }), className),
       },
-      props
+      {
+        ...(props as any),
+        nativeButton: (props as any).nativeButton ?? (render ? false : undefined),
+      }
     ),
     render: !tooltip ? render : <TooltipTrigger render={render} />,
     state: {

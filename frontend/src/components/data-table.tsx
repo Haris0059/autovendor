@@ -283,6 +283,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     cell: () => (
       <DropdownMenu>
         <DropdownMenuTrigger
+          nativeButton
           render={
             <Button
               variant="ghost"
@@ -437,6 +438,7 @@ export function DataTable({
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger
+              nativeButton
               render={<Button variant="outline" size="sm" />}
             >
               <Columns3Icon data-icon="inline-start" />

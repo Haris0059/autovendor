@@ -216,6 +216,7 @@ export default function WooCommercePage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger
+                          nativeButton
                           render={
                             <Button
                               variant="ghost"

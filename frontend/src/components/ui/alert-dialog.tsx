@@ -15,7 +15,7 @@ function AlertDialogTrigger({ render, ...props }: AlertDialogPrimitive.Trigger.P
     <AlertDialogPrimitive.Trigger
       data-slot="alert-dialog-trigger"
       render={render}
-      nativeButton={render ? false : props.nativeButton}
+      nativeButton={props.nativeButton ?? (render ? false : undefined)}
       {...props}
     />
   )

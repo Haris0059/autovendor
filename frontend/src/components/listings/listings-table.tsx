@@ -252,6 +252,7 @@ export function ListingsTable({
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger
+              nativeButton
               render={<Button variant="ghost" size="icon" className="size-8" />}
             >
               <MoreHorizontalIcon className="size-4" />

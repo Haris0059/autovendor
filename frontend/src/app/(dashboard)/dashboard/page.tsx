@@ -332,7 +332,7 @@ export default function DashboardPage() {
           <CardContent className="flex flex-col gap-3">
             {(accounts.data ?? []).map((acc) => {
               const count = (listings.data ?? []).filter(
-                (l) => (l as { account_id?: number }).account_id === acc.id
+                (l) => l.account_id === acc.id
               ).length;
               return (
                 <div

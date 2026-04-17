@@ -64,7 +64,7 @@ export default function AccountsPage() {
 
   const countFor = (id: number) =>
     (allListings.data ?? []).filter(
-      (l) => (l as { account_id?: number }).account_id === id
+      (l) => l.account_id === id
     ).length;
 
   const columns: ColumnDef<OlxAccount, unknown>[] = [

@@ -67,7 +67,7 @@ export default function AccountDetailPage({
   const scoped = useMemo(
     () =>
       (listings.data ?? []).filter(
-        (l) => (l as { account_id?: number }).account_id === accountId
+        (l) => l.account_id === accountId
       ),
     [listings.data, accountId]
   );

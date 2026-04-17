@@ -79,7 +79,7 @@ export function SignupForm({
             <Input
               id="name"
               type="text"
-              placeholder="Haris Hodžić"
+              placeholder="Haris Skeledžija"
               autoComplete="name"
               {...register("name")}
             />

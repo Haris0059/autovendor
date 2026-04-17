@@ -152,15 +152,18 @@ export default function CategoryMappingsPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Woo Store:</span>
           <Select 
-            value={selectedStoreId?.toString() || ""} 
-            onValueChange={(v) => setSelectedStoreId(v ? parseInt(v) : null)}
+            value={stores?.find(s => s.id === selectedStoreId)?.name || ""} 
+            onValueChange={(v) => {
+              const store = stores?.find(s => s.name === v);
+              setSelectedStoreId(store ? store.id : null);
+            }}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Odaberi shop" />
             </SelectTrigger>
             <SelectContent>
               {stores?.map(s => (
-                <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

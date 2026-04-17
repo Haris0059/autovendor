@@ -73,7 +73,7 @@ export function useCreateListing() {
       [key: string]: unknown;
     }) => {
       if (USE_MOCKS) {
-        const created: OlxListing & { account_id: number } = {
+        const created: OlxListing = {
           id: Math.floor(50000 + Math.random() * 10000),
           account_id: data.account_id,
           title: data.title,
@@ -115,7 +115,7 @@ export function useUpdateListing() {
           account_id: current.account_id,
           images: current.images,
           updated_at: new Date().toISOString(),
-        } as OlxListing & { account_id: number };
+        } as OlxListing;
         mockListingsStore[idx] = merged;
         return mockDelay(merged);
       }

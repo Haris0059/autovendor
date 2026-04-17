@@ -52,6 +52,7 @@ import { toast } from "sonner"
 import { toastMessages } from "@/lib/toast-messages"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function CategoryMappingsPage() {
   const { data: mappings, isLoading: mappingsLoading } = useCategoryMappings()
@@ -126,18 +127,15 @@ export default function CategoryMappingsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mapiranje kategorija</h1>
-          <p className="text-sm text-muted-foreground">
-            Definišite u koju OLX kategoriju se smještaju proizvodi iz WooCommerce kategorija.
-          </p>
-        </div>
+      <PageHeader
+        title="Mapiranje kategorija"
+        description="Definišite u koju OLX kategoriju se smještaju proizvodi iz WooCommerce kategorija."
+      >
         <Button onClick={() => setIsAddOpen(true)}>
           <PlusIcon className="mr-2 size-4" />
           Novo mapiranje
         </Button>
-      </div>
+      </PageHeader>
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">

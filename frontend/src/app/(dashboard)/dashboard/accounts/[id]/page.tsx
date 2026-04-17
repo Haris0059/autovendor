@@ -37,6 +37,7 @@ import {
   useOlxAccount,
 } from "@/hooks/use-olx-accounts";
 import { toastMessages } from "@/lib/toast-messages";
+import { PageHeader } from "@/components/shared/page-header";
 
 const LIMIT_LABELS: Record<string, string> = {
   cars: "Automobili",
@@ -97,7 +98,6 @@ export default function AccountDetailPage({
   const handleDelete = () => {
     deleteAccount.mutate(accountId, {
       onSuccess: () => {
-        toast.success(toastMessages.deleted);
         if (active?.id === accountId) setAccount(null);
         router.push("/dashboard/accounts");
       },
@@ -111,141 +111,151 @@ export default function AccountDetailPage({
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title={account.data.username}
+        description={`OLX ID: ${account.data.olx_user_id ?? "—"}`}
+      >
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
+            className="mr-2"
             render={<Link href="/dashboard/accounts" />}
           >
             <ArrowLeftIcon />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{account.data.username}</h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>OLX ID: {account.data.olx_user_id ?? "—"}</span>
-              <TokenStatusBadge expiresAt={account.data.token_expires_at} />
-            </div>
+          <TokenStatusBadge expiresAt={account.data.token_expires_at} />
+          <div className="ml-4 flex items-center gap-2">
+            <Button
+              variant={isActive ? "secondary" : "outline"}
+              onClick={() => setAccount(account.data ?? null)}
+              disabled={isActive}
+            >
+              <StarIcon />
+              {isActive ? "Aktivan" : "Aktiviraj"}
+            </Button>
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <PencilIcon />
+              Uredi
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2Icon />
+              Obriši
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isActive ? "secondary" : "outline"}
-            onClick={() => setAccount(account.data ?? null)}
-            disabled={isActive}
-          >
-            <StarIcon />
-            {isActive ? "Aktivan" : "Aktiviraj"}
-          </Button>
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
-            <PencilIcon />
-            Uredi
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2Icon />
-            Obriši
-          </Button>
-        </div>
+      </PageHeader>
+
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+        <StatCard
+          label="Aktivni artikli"
+          value={countBy("active")}
+          isLoading={listings.isLoading}
+        />
+        <StatCard
+          label="Drafts"
+          value={countBy("draft")}
+          isLoading={listings.isLoading}
+        />
+        <StatCard
+          label="Istekli"
+          value={countBy("expired")}
+          isLoading={listings.isLoading}
+        />
+        <StatCard
+          label="Završeni"
+          value={countBy("finished")}
+          isLoading={listings.isLoading}
+        />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-        <StatCard label="Aktivni" value={countBy("active")} />
-        <StatCard label="Drafts" value={countBy("draft")} />
-        <StatCard label="Završeni" value={countBy("finished")} />
-        <StatCard label="Istekli" value={countBy("expired")} />
-      </div>
+      <div className="grid grid-cols-1 gap-4 @4xl/main:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Limiti objavljivanja</CardTitle>
+            <CardDescription>
+              Preostali broj besplatnih objava po kategorijama.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            {Object.entries(limits.data ?? {}).map(([key, value]) => (
+              <Progress key={key} value={(value.used / value.limit) * 100}>
+                <ProgressLabel>{LIMIT_LABELS[key] ?? key}</ProgressLabel>
+                <ProgressValue>
+                  {() => `${value.used} / ${value.limit}`}
+                </ProgressValue>
+                <ProgressTrack>
+                  <ProgressIndicator />
+                </ProgressTrack>
+              </Progress>
+            ))}
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
-        {(["cars", "real_estate", "other"] as const).map((key) => {
-          const info = limits.data?.[key];
-          const used = info?.used ?? 0;
-          const total = info?.limit ?? 0;
-          const pct = total > 0 ? Math.round((used / total) * 100) : 0;
-          return (
-            <Card key={key}>
-              <CardHeader>
-                <CardDescription>{LIMIT_LABELS[key]}</CardDescription>
-                <CardTitle className="text-2xl tabular-nums">
-                  {used} / {total}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Progress value={pct}>
-                  <ProgressLabel>Iskorišteno</ProgressLabel>
-                  <ProgressValue>{() => `${pct}%`}</ProgressValue>
-                  <ProgressTrack>
-                    <ProgressIndicator />
-                  </ProgressTrack>
-                </Progress>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card>
+          <CardHeader>
+            <CardTitle>Budžet za obnavljanje</CardTitle>
+            <CardDescription>
+              Pregled preostalih besplatnih i plaćenih obnova.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <Progress
+              value={
+                ((refresh.data?.free_limit ?? 0) -
+                  (refresh.data?.free_count ?? 0) /
+                    (refresh.data?.free_limit ?? 1)) *
+                100
+              }
+            >
+              <ProgressLabel>Besplatne obnove</ProgressLabel>
+              <ProgressValue>
+                {() => `${refresh.data?.free_count} / ${refresh.data?.free_limit}`}
+              </ProgressValue>
+              <ProgressTrack>
+                <ProgressIndicator />
+              </ProgressTrack>
+            </Progress>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium">Plaćene obnove</span>
+                <span className="text-xs text-muted-foreground">
+                  Dostupne za sve artikle
+                </span>
+              </div>
+              <span className="text-2xl font-bold">
+                {refresh.data?.paid_count ?? 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Osvježavanja</CardDescription>
-          <CardTitle>
-            {refresh.data?.free_count ?? 0} / {refresh.data?.free_limit ?? 0}{" "}
-            besplatnih
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 text-sm @xl/main:grid-cols-3">
-          <div className="rounded-md border p-3">
-            <div className="text-xs text-muted-foreground">
-              Plaćena osvježavanja
-            </div>
-            <div className="text-lg font-semibold tabular-nums">
-              {refresh.data?.paid_count ?? 0}
-            </div>
-          </div>
-          <div className="rounded-md border p-3">
-            <div className="text-xs text-muted-foreground">
-              Artikli pod profilom
-            </div>
-            <div className="text-lg font-semibold tabular-nums">
-              {refresh.data?.listing_count ?? scoped.length}
-            </div>
-          </div>
-          <div className="rounded-md border p-3">
-            <div className="text-xs text-muted-foreground">Iskorišteno %</div>
-            <div className="text-lg font-semibold tabular-nums">
-              {refresh.data && refresh.data.free_limit > 0
-                ? Math.round(
-                    (refresh.data.free_count / refresh.data.free_limit) * 100
-                  )
-                : 0}
-              %
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <ListingsTable
         listings={scoped}
         isLoading={listings.isLoading}
         isError={listings.isError}
-        hasAccount
+        hasAccount={true}
         total={scoped.length}
+        enableRowActions
       />
 
       <EditProfileDialog
-        account={account.data}
         open={editOpen}
         onOpenChange={setEditOpen}
+        account={account.data}
       />
+
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Obriši OLX profil"
-        description={`Profil "${account.data.username}" će biti trajno obrisan.`}
+        title="Obriši profil"
+        description={`Jeste li sigurni da želite obrisati profil "${account.data.username}"? Ova akcija je nepovratna.`}
         confirmLabel="Obriši"
         destructive
-        loading={deleteAccount.isPending}
         onConfirm={handleDelete}
       />
     </div>

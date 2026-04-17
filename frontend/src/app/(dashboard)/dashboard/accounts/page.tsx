@@ -42,6 +42,7 @@ import {
 } from "@/hooks/use-olx-accounts";
 import { toastMessages } from "@/lib/toast-messages";
 import type { OlxAccount } from "@/types/olx";
+import { PageHeader } from "@/components/shared/page-header";
 
 function formatDate(value: string): string {
   try {
@@ -173,18 +174,15 @@ export default function AccountsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">OLX Profili</h1>
-          <p className="text-muted-foreground">
-            Upravljanje povezanim OLX.ba računima.
-          </p>
-        </div>
+      <PageHeader
+        title="OLX Profili"
+        description="Upravljanje povezanim OLX.ba računima."
+      >
         <Button onClick={() => setAddOpen(true)}>
           <PlusIcon />
           Dodaj profil
         </Button>
-      </div>
+      </PageHeader>
 
       {!isLoading && !isError && accounts.length === 0 ? (
         <EmptyState
@@ -199,10 +197,9 @@ export default function AccountsPage() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Povezani profili</CardTitle>
+            <CardTitle>Povezani računi</CardTitle>
             <CardDescription>
-              {accounts.length}{" "}
-              {accounts.length === 1 ? "profil" : "profila"} povezano
+              Pregled svih OLX.ba profila povezanih sa vašim nalogom.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -211,30 +208,30 @@ export default function AccountsPage() {
               data={accounts}
               isLoading={isLoading}
               isError={isError}
-              emptyMessage="Nema povezanih profila."
             />
           </CardContent>
         </Card>
       )}
 
       <AddProfileDialog open={addOpen} onOpenChange={setAddOpen} />
+
       <EditProfileDialog
-        account={editTarget}
         open={!!editTarget}
         onOpenChange={(o) => !o && setEditTarget(null)}
+        account={editTarget}
       />
+
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
-        title="Obriši OLX profil"
+        title="Obriši profil"
         description={
           deleteTarget
-            ? `Profil "${deleteTarget.username}" će biti trajno obrisan.`
-            : undefined
+            ? `Jeste li sigurni da želite obrisati profil "${deleteTarget.username}"? Ova akcija je nepovratna.`
+            : ""
         }
         confirmLabel="Obriši"
         destructive
-        loading={deleteAccount.isPending}
         onConfirm={handleDelete}
       />
     </div>

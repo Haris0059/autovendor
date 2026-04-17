@@ -64,7 +64,7 @@ export function useSponsorPrice(input: SponsorPriceInput | null) {
         locations: number;
         extras: number;
         total: number;
-      }>(`/olx/listings/${input.listing_id}/sponsore/price`, {
+      }>(`/olx/listings/${input.listing_id}/sponsored/price`, {
         params: {
           type: String(input.type),
           days: String(input.days),
@@ -102,7 +102,7 @@ export function useCreateSponsor() {
         sponsored = [created, ...sponsored];
         return mockDelay(created);
       }
-      return api.post(`/olx/listings/${input.listing_id}/sponsore`, input);
+      return api.post(`/olx/listings/${input.listing_id}/sponsored`, input);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sponsored"] }),
   });

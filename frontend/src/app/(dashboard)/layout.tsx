@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -10,17 +11,16 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 function useAuthGuard(): "loading" | "authenticated" {
   const router = useRouter();
-  const hasToken =
-    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+  const { isPending, isError } = useAuth();
 
   useEffect(() => {
-    if (!hasToken) {
+    if (isError) {
       router.replace("/login");
     }
-  }, [hasToken, router]);
+  }, [isError, router]);
 
-  if (typeof window === "undefined") return "loading";
-  return hasToken ? "authenticated" : "loading";
+  if (isPending || isError) return "loading";
+  return "authenticated";
 }
 
 export default function DashboardLayout({

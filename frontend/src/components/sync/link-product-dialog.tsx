@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { z } from "zod"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -28,6 +27,7 @@ import { useCreateProductLink } from "@/hooks/use-sync"
 import { toast } from "sonner"
 import { toastMessages } from "@/lib/toast-messages"
 import { Loader2Icon, ArrowRightLeftIcon, ShoppingCartIcon, LayoutGridIcon } from "lucide-react"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 
 const linkSchema = z.object({
   olx_account_id: z.string().min(1, "Odaberite OLX profil"),
@@ -68,6 +68,7 @@ export function LinkProductDialog({
     },
   })
 
+  const { formState: { errors } } = form
   const selectedStoreId = form.watch("woo_store_id")
   const selectedAccountId = form.watch("olx_account_id")
   
@@ -111,8 +112,8 @@ export function LinkProductDialog({
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>WooCommerce Shop</Label>
+            <Field data-invalid={!!errors.woo_store_id || undefined}>
+              <FieldLabel>WooCommerce Shop</FieldLabel>
               <Select 
                 value={form.watch("woo_store_id")} 
                 onValueChange={(v) => form.setValue("woo_store_id", v ?? "")}
@@ -126,9 +127,11 @@ export function LinkProductDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>OLX Profil</Label>
+              <FieldError errors={errors.woo_store_id ? [errors.woo_store_id] : undefined} />
+            </Field>
+            
+            <Field data-invalid={!!errors.olx_account_id || undefined}>
+              <FieldLabel>OLX Profil</FieldLabel>
               <Select 
                 value={form.watch("olx_account_id")} 
                 onValueChange={(v) => form.setValue("olx_account_id", v ?? "")}
@@ -142,15 +145,16 @@ export function LinkProductDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              <FieldError errors={errors.olx_account_id ? [errors.olx_account_id] : undefined} />
+            </Field>
           </div>
 
           <div className="grid gap-4 rounded-lg border p-4 bg-muted/30">
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-2">
+            <Field data-invalid={!!errors.woo_product_id || undefined}>
+              <FieldLabel className="flex items-center gap-2">
                 <ShoppingCartIcon className="size-3" />
                 WooCommerce Proizvod
-              </Label>
+              </FieldLabel>
               <Select 
                 value={form.watch("woo_product_id")} 
                 onValueChange={(v) => form.setValue("woo_product_id", v ?? "")}
@@ -167,17 +171,18 @@ export function LinkProductDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              <FieldError errors={errors.woo_product_id ? [errors.woo_product_id] : undefined} />
+            </Field>
 
             <div className="flex justify-center">
               <ArrowRightLeftIcon className="size-4 text-muted-foreground" />
             </div>
 
-            <div className="grid gap-2">
-              <Label className="flex items-center gap-2">
+            <Field data-invalid={!!errors.olx_listing_id || undefined}>
+              <FieldLabel className="flex items-center gap-2">
                 <LayoutGridIcon className="size-3" />
                 OLX Artikal
-              </Label>
+              </FieldLabel>
               <Select 
                 value={form.watch("olx_listing_id")} 
                 onValueChange={(v) => form.setValue("olx_listing_id", v ?? "")}
@@ -194,11 +199,12 @@ export function LinkProductDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              <FieldError errors={errors.olx_listing_id ? [errors.olx_listing_id] : undefined} />
+            </Field>
           </div>
 
           <div className="grid gap-3">
-            <Label>Smjer sinhronizacije</Label>
+            <FieldLabel>Smjer sinhronizacije</FieldLabel>
             <RadioGroup 
               value={form.watch("sync_direction")} 
               onValueChange={(v) => form.setValue("sync_direction", v as "woo_to_olx" | "olx_to_woo")}
@@ -206,17 +212,17 @@ export function LinkProductDialog({
             >
               <div className="flex items-center space-x-2 rounded-md border p-3 hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="woo_to_olx" id="woo_to_olx" />
-                <Label htmlFor="woo_to_olx" className="flex flex-1 flex-col cursor-pointer">
+                <label htmlFor="woo_to_olx" className="flex flex-1 flex-col cursor-pointer">
                   <span className="font-medium text-sm text-foreground">WooCommerce &rarr; OLX</span>
                   <span className="text-xs text-muted-foreground">Promjene na web shopu će ažurirati OLX artikal.</span>
-                </Label>
+                </label>
               </div>
               <div className="flex items-center space-x-2 rounded-md border p-3 hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="olx_to_woo" id="olx_to_woo" />
-                <Label htmlFor="olx_to_woo" className="flex flex-1 flex-col cursor-pointer">
+                <label htmlFor="olx_to_woo" className="flex flex-1 flex-col cursor-pointer">
                   <span className="font-medium text-sm text-foreground">OLX &rarr; WooCommerce</span>
                   <span className="text-xs text-muted-foreground">Promjene na OLX-u će ažurirati web shop (uskoro).</span>
-                </Label>
+                </label>
               </div>
             </RadioGroup>
           </div>

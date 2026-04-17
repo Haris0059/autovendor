@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function StoreDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: storeIdStr } = use(params)
@@ -101,28 +102,17 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" className="size-8" render={<Link href="/woocommerce" />}>
-          <ChevronLeftIcon className="size-4" />
-        </Button>
-        <div className="flex flex-col">
-          <h1 className="text-xl font-bold tracking-tight">{store.name}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <GlobeIcon className="size-3" />
-            <a
-              href={store.store_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-foreground hover:underline"
-            >
-              {store.store_url}
-              <ExternalLinkIcon className="size-3" />
-            </a>
-          </div>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
+      <PageHeader 
+        title={store.name} 
+        description={store.store_url}
+      >
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="size-8" render={<Link href="/woocommerce" />}>
+            <ChevronLeftIcon className="size-4" />
+          </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={handleTest}
             disabled={testConnection.isPending}
           >
@@ -131,11 +121,11 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
             ) : (
               <RefreshCwIcon className="mr-2 size-4" />
             )}
-            Testiraj konekciju
+            Testiraj
           </Button>
-          <Button>Uredi postavke</Button>
+          <Button size="sm">Uredi</Button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

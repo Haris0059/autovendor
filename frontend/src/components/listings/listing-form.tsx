@@ -180,8 +180,12 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
         toast.success(toastMessages.updated);
         onSaved?.(listing.id);
       } else {
+        if (!account) {
+          toast.error("Odaberite OLX profil prije kreiranja artikla.");
+          return;
+        }
         const created = await create.mutateAsync({
-          account_id: account!.id,
+          account_id: account.id,
           ...data,
         });
         toast.success(toastMessages.created);

@@ -38,6 +38,7 @@ import {
 import Link from "next/link"
 import { formatDate } from "@/lib/utils"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function SyncHistoryPage() {
   const [page, setPage] = useState(1)
@@ -71,7 +72,7 @@ export default function SyncHistoryPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center gap-4">
+      <PageHeader title="Historija sinhronizacije">
         <Button 
           variant="outline" 
           size="icon" 
@@ -80,8 +81,7 @@ export default function SyncHistoryPage() {
         >
           <ArrowLeftIcon className="size-4" />
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Historija sinhronizacije</h1>
-      </div>
+      </PageHeader>
 
       <Card>
         <CardHeader className="pb-3">

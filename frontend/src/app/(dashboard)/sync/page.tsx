@@ -25,6 +25,8 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
 import { Loader2Icon } from "lucide-react"
 
+import { PageHeader } from "@/components/shared/page-header"
+
 export default function SyncPage() {
   const { data: links, isLoading: linksLoading } = useProductLinks()
   const { data: mappings, isLoading: mappingsLoading } = useCategoryMappings()
@@ -38,13 +40,15 @@ export default function SyncPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Sinhronizacija</h1>
+      <PageHeader
+        title="Sinhronizacija"
+        description="Pregled i upravljanje sinhronizacijom artikala između WooCommerce-a i OLX-a."
+      >
         <Button variant="outline" size="sm">
           <RefreshCwIcon className="mr-2 size-4" />
           Osvježi podatke
         </Button>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard

@@ -57,6 +57,7 @@ import { toast } from "sonner"
 import { toastMessages } from "@/lib/toast-messages"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { formatDate } from "@/lib/utils"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function WooCommercePage() {
   const { data: stores, isLoading } = useWooStores()
@@ -92,6 +93,27 @@ export default function WooCommercePage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+      <PageHeader
+        title="WooCommerce"
+        description="Upravljajte vašim povezanim WooCommerce prodavnicama."
+      >
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="size-8" onClick={() => setInfoDialogOpen(true)}>
+            <InfoIcon className="size-4" />
+          </Button>
+
+          <Button variant="outline" size="sm">
+            <DownloadIcon className="mr-2 size-4" />
+            Preuzmi plugin
+          </Button>
+
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+            <PlusIcon className="mr-2 size-4" />
+            Dodaj Web Shop
+          </Button>
+        </div>
+      </PageHeader>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
@@ -103,20 +125,6 @@ export default function WooCommercePage() {
             className="w-52 pl-8"
           />
         </div>
-
-        <Button variant="outline" size="icon" className="size-8" onClick={() => setInfoDialogOpen(true)}>
-          <InfoIcon className="size-4" />
-        </Button>
-
-        <Button variant="outline">
-          <DownloadIcon className="mr-2 size-4" />
-          Preuzmi plugin
-        </Button>
-
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <PlusIcon className="mr-2 size-4" />
-          Dodaj Web Shop
-        </Button>
 
         <div className="ml-auto flex items-center gap-2">
           <Select value={perPage} onValueChange={(v) => v && setPerPage(v)}>

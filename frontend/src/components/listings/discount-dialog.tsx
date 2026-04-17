@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { z } from "zod"
 import {
   Dialog,
   DialogContent,
@@ -12,12 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useCreateDiscount } from "@/hooks/use-sponsored"
 import { toast } from "sonner"
 import { Loader2Icon, TagIcon, InfoIcon, TrendingDownIcon } from "lucide-react"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 
 const discountSchema = z.object({
   original_price: z.number().positive("Cijena mora biti pozitivan broj"),
@@ -56,6 +56,7 @@ export function DiscountDialog({
     },
   })
 
+  const { formState: { errors } } = form
   const { original_price, discount_price } = form.watch()
   const saving = original_price && discount_price ? original_price - discount_price : 0
   const savingPercent = original_price && discount_price ? Math.round((saving / original_price) * 100) : 0
@@ -93,8 +94,8 @@ export function DiscountDialog({
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="original_price">Originalna cijena</Label>
+            <Field data-invalid={!!errors.original_price || undefined}>
+              <FieldLabel htmlFor="original_price">Originalna cijena</FieldLabel>
               <div className="relative">
                 <Input
                   id="original_price"
@@ -104,12 +105,11 @@ export function DiscountDialog({
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">KM</span>
               </div>
-              {form.formState.errors.original_price && (
-                <p className="text-[10px] text-destructive">{form.formState.errors.original_price.message}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="discount_price">Snižena cijena</Label>
+              <FieldError errors={errors.original_price ? [errors.original_price] : undefined} />
+            </Field>
+            
+            <Field data-invalid={!!errors.discount_price || undefined}>
+              <FieldLabel htmlFor="discount_price">Snižena cijena</FieldLabel>
               <div className="relative">
                 <Input
                   id="discount_price"
@@ -120,10 +120,8 @@ export function DiscountDialog({
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-bold">KM</span>
               </div>
-              {form.formState.errors.discount_price && (
-                <p className="text-[10px] text-destructive">{form.formState.errors.discount_price.message}</p>
-              )}
-            </div>
+              <FieldError errors={errors.discount_price ? [errors.discount_price] : undefined} />
+            </Field>
           </div>
 
           {saving > 0 && (
@@ -139,7 +137,7 @@ export function DiscountDialog({
           )}
 
           <div className="grid gap-3">
-            <Label>Trajanje sniženja</Label>
+            <FieldLabel>Trajanje sniženja</FieldLabel>
             <RadioGroup 
               value={form.watch("days")} 
               onValueChange={(v) => form.setValue("days", v as "3" | "7" | "30")}
@@ -148,13 +146,13 @@ export function DiscountDialog({
               {[3, 7, 30].map(d => (
                 <div key={d}>
                   <RadioGroupItem value={d.toString()} id={`d-${d}`} className="peer sr-only" />
-                  <Label
+                  <label
                     htmlFor={`d-${d}`}
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-2 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-red-500 [&:has([data-state=checked])]:border-red-500 cursor-pointer"
                   >
                     <span className="text-sm font-bold">{d}</span>
                     <span className="text-[10px] text-muted-foreground uppercase">dana</span>
-                  </Label>
+                  </label>
                 </div>
               ))}
             </RadioGroup>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { z } from "zod"
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -31,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useSponsorPrice, useCreateSponsor } from "@/hooks/use-sponsored"
 import { toast } from "sonner"
 import { Loader2Icon, ZapIcon, InfoIcon, WalletIcon } from "lucide-react"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 
 const sponsorSchema = z.object({
   type: z.enum(["1", "2"]), // 1: Category, 2: Global
@@ -66,6 +66,7 @@ export function SponsorDialog({
     },
   })
 
+  const { formState: { errors } } = form
   const { type, days, refresh_every, homepage } = form.watch()
   
   const [priceInput, setPriceInput] = useState<{
@@ -124,8 +125,8 @@ export function SponsorDialog({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label>Tip sponzorstva</Label>
+          <Field data-invalid={!!errors.type || undefined}>
+            <FieldLabel>Tip sponzorstva</FieldLabel>
             <Select value={type} onValueChange={(v) => form.setValue("type", (v as "1" | "2") ?? "1")}>
               <SelectTrigger>
                 <SelectValue />
@@ -135,11 +136,12 @@ export function SponsorDialog({
                 <SelectItem value="2">Izdvojena (Globalno)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+            <FieldError errors={errors.type ? [errors.type] : undefined} />
+          </Field>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label>Trajanje (dana)</Label>
+            <Field data-invalid={!!errors.days || undefined}>
+              <FieldLabel>Trajanje (dana)</FieldLabel>
               <Select value={days} onValueChange={(v) => form.setValue("days", v ?? "7")}>
                 <SelectTrigger>
                   <SelectValue />
@@ -150,9 +152,11 @@ export function SponsorDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label>Automatsko obnavljanje</Label>
+              <FieldError errors={errors.days ? [errors.days] : undefined} />
+            </Field>
+            
+            <Field data-invalid={!!errors.refresh_every || undefined}>
+              <FieldLabel>Automatsko obnavljanje</FieldLabel>
               <Select value={refresh_every} onValueChange={(v) => form.setValue("refresh_every", v ?? "0")}>
                 <SelectTrigger>
                   <SelectValue />
@@ -165,7 +169,8 @@ export function SponsorDialog({
                   <SelectItem value="24">Jednom dnevno</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+              <FieldError errors={errors.refresh_every ? [errors.refresh_every] : undefined} />
+            </Field>
           </div>
 
           <div className="flex items-center space-x-2 rounded-md border p-3 hover:bg-muted/50 cursor-pointer">
@@ -174,10 +179,10 @@ export function SponsorDialog({
               checked={homepage} 
               onCheckedChange={(v) => form.setValue("homepage", !!v)} 
             />
-            <Label htmlFor="homepage" className="flex flex-1 flex-col gap-1 cursor-pointer">
+            <FieldLabel htmlFor="homepage" className="flex flex-1 flex-col gap-1 cursor-pointer">
               <span className="font-medium">Prikaži na naslovnici OLX.ba</span>
               <span className="text-xs text-muted-foreground">Maksimalna vidljivost za sve posjetioce.</span>
-            </Label>
+            </FieldLabel>
           </div>
 
           <Card className="bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-900/30">

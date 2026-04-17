@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import { z } from "zod"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useCreateWooStore, useTestWooConnection } from "@/hooks/use-woo-stores"
 import { Loader2Icon, CheckCircle2Icon, XCircleIcon } from "lucide-react"
 import { toastMessages } from "@/lib/toast-messages"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 
 const formSchema = z.object({
   name: z.string().min(2, "Naziv mora imati barem 2 znaka"),
@@ -45,6 +45,8 @@ export function AddWebShopDialog({
       api_key: "",
     },
   })
+
+  const { formState: { errors } } = form
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -100,33 +102,29 @@ export function AddWebShopDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Naziv shopa</Label>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-4">
+          <Field data-invalid={!!errors.name || undefined}>
+            <FieldLabel htmlFor="name">Naziv shopa</FieldLabel>
             <Input
               id="name"
               placeholder="npr. Moj WooCommerce Shop"
               {...form.register("name")}
             />
-            {form.formState.errors.name && (
-              <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-            )}
-          </div>
+            <FieldError errors={errors.name ? [errors.name] : undefined} />
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="store_url">URL shopa</Label>
+          <Field data-invalid={!!errors.store_url || undefined}>
+            <FieldLabel htmlFor="store_url">URL shopa</FieldLabel>
             <Input
               id="store_url"
               placeholder="https://example.com"
               {...form.register("store_url")}
             />
-            {form.formState.errors.store_url && (
-              <p className="text-xs text-destructive">{form.formState.errors.store_url.message}</p>
-            )}
-          </div>
+            <FieldError errors={errors.store_url ? [errors.store_url] : undefined} />
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="api_key">API ključ</Label>
+          <Field data-invalid={!!errors.api_key || undefined}>
+            <FieldLabel htmlFor="api_key">API ključ</FieldLabel>
             <div className="relative">
               <Input
                 id="api_key"
@@ -142,13 +140,11 @@ export function AddWebShopDialog({
                 {testConnection.isError && <XCircleIcon className="size-4 text-destructive" />}
               </div>
             </div>
-            {form.formState.errors.api_key && (
-              <p className="text-xs text-destructive">{form.formState.errors.api_key.message}</p>
-            )}
-            <p className="text-[10px] text-muted-foreground">
+            <FieldError errors={errors.api_key ? [errors.api_key] : undefined} />
+            <p className="text-[10px] text-muted-foreground mt-1">
               Ključ možete pronaći u postavkama AutoVendor plugina na vašem WordPress sajtu.
             </p>
-          </div>
+          </Field>
 
           <Button
             type="button"

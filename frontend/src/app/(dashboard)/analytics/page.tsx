@@ -32,6 +32,7 @@ import {
   Loader2Icon
 } from "lucide-react"
 import { StatCard } from "@/components/shared/stat-card"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function AnalyticsPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("Svi profili")
@@ -45,13 +46,10 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Analitika</h1>
-          <p className="text-sm text-muted-foreground">
-            Pratite performanse vaših OLX profila i sinhronizacije.
-          </p>
-        </div>
+      <PageHeader
+        title="Analitika"
+        description="Pratite performanse vaših OLX profila i sinhronizacije."
+      >
         <div className="flex flex-wrap items-center gap-2">
           <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "Svi profili")}>
             <SelectTrigger className="w-[180px] h-9">
@@ -76,7 +74,7 @@ export default function AnalyticsPage() {
             Izvještaj
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard

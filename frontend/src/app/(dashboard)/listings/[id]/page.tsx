@@ -29,6 +29,7 @@ import { ListingForm } from "@/components/listings/listing-form";
 import { OlxStatusBadge } from "@/components/shared/status-badge";
 import { useDeleteListing, useListing } from "@/hooks/use-listings";
 import { toastMessages } from "@/lib/toast-messages";
+import { PageHeader } from "@/components/shared/page-header";
 
 export default function EditListingPage({
   params,
@@ -77,76 +78,63 @@ export default function EditListingPage({
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title={listing.data.title}
+        description={`ID: ${listing.data.id}`}
+      >
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
+            className="mr-2"
             render={<Link href="/listings" />}
           >
             <ArrowLeftIcon />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{listing.data.title}</h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>ID: {listing.data.id}</span>
-              <OlxStatusBadge status={listing.data.status} />
-            </div>
+          <OlxStatusBadge status={listing.data.status} />
+          <div className="ml-4 flex items-center gap-2">
+            <Button
+              variant="outline"
+              render={<Link href={`/listings/${listingId}/images`} />}
+            >
+              <ImagesIcon />
+              Slike
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2Icon />
+              Obriši
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            render={<Link href={`/listings/${listingId}/images`} />}
-          >
-            <ImagesIcon />
-            Upravljaj slikama
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-            <Trash2Icon />
-            Obriši
-          </Button>
-        </div>
-      </div>
+      </PageHeader>
 
       <Tabs defaultValue="details">
         <TabsList>
           <TabsTrigger value="details">Detalji</TabsTrigger>
           <TabsTrigger value="history">Historija</TabsTrigger>
-          <TabsTrigger value="sponsor">Sponzorisanje</TabsTrigger>
+          <TabsTrigger value="sponsored" disabled>
+            Sponzorisanje
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="details" className="mt-4 space-y-4">
           <ListingForm listing={listing.data} />
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Historija sinhronizacija</CardTitle>
+              <CardTitle>Historija promjena</CardTitle>
               <CardDescription>
-                Zapisi sinhronizacije za ovaj artikal.
+                Pregled svih promjena na ovom artiklu.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Nema zapisa za ovaj artikal.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sponsor" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sponzorisanje</CardTitle>
-              <CardDescription>
-                Upravljajte sponzorstvom i sniženjima.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Opcije sponzorisanja će biti dostupne uskoro.
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Uskoro…
               </p>
             </CardContent>
           </Card>
@@ -157,10 +145,9 @@ export default function EditListingPage({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Obriši artikal"
-        description={`"${listing.data.title}" će biti trajno obrisan.`}
+        description={`Jeste li sigurni da želite obrisati artikal "${listing.data.title}"? Ova akcija je nepovratna.`}
         confirmLabel="Obriši"
         destructive
-        loading={remove.isPending}
         onConfirm={handleDelete}
       />
     </div>

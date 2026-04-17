@@ -30,6 +30,7 @@ import {
   Loader2Icon
 } from "lucide-react"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function SettingsPage() {
   const { data: user } = useAuth()
@@ -47,7 +48,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <h1 className="text-2xl font-bold tracking-tight">Postavke</h1>
+      <PageHeader title="Postavke" />
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">

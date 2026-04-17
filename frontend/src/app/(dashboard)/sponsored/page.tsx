@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default function SponsoredPage() {
   const { data: sponsored, isLoading: sponsoredLoading } = useSponsoredListings()
@@ -82,9 +83,7 @@ export default function SponsoredPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Sponzorstva i Sniženja</h1>
-      </div>
+      <PageHeader title="Sponzorstva i Sniženja" />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

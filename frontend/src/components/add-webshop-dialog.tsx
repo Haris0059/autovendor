@@ -1,5 +1,9 @@
 "use client"
 
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -10,14 +14,18 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { useCreateWooStore, useTestWooConnection } from "@/hooks/use-woo-stores"
+import { Loader2Icon, CheckCircle2Icon, XCircleIcon } from "lucide-react"
+import { toastMessages } from "@/lib/toast-messages"
+import { Field, FieldLabel, FieldError } from "@/components/ui/field"
+
+const formSchema = z.object({
+  name: z.string().min(2, "Naziv mora imati barem 2 znaka"),
+  store_url: z.string().url("Unesite ispravan URL (npr. https://mojshop.ba)"),
+  api_key: z.string().min(10, "API ključ mora imati barem 10 znakova"),
+})
+
+type FormValues = z.infer<typeof formSchema>
 
 export function AddWebShopDialog({
   open,
@@ -26,60 +34,143 @@ export function AddWebShopDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const createStore = useCreateWooStore()
+  const testConnection = useTestWooConnection()
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      store_url: "",
+      api_key: "",
+    },
+  })
+
+  const { formState: { errors } } = form
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      form.reset()
+      testConnection.reset()
+    }
+    onOpenChange(newOpen)
+  }
+
+  const onTest = async () => {
+    const isValid = await form.trigger(["store_url", "api_key"])
+    if (!isValid) return
+
+    const values = form.getValues()
+    testConnection.mutate(
+      { store_url: values.store_url, api_key: values.api_key },
+      {
+        onSuccess: (data) => {
+          if (data.ok) {
+            toast.success(`Konekcija uspješna! Pronađeno ${data.products_count} proizvoda.`)
+          } else {
+            toast.error("Konekcija nije uspjela. Provjerite podatke.")
+          }
+        },
+        onError: (error: unknown) => {
+          const message = error instanceof Error ? error.message : "Greška pri testiranju konekcije."
+          toast.error(message)
+        },
+      }
+    )
+  }
+
+  const onSubmit = (values: FormValues) => {
+    createStore.mutate(values, {
+      onSuccess: () => {
+        toast.success(toastMessages.woo.createSuccess)
+        handleOpenChange(false)
+      },
+      onError: (error: unknown) => {
+        const message = error instanceof Error ? error.message : toastMessages.woo.createError
+        toast.error(message)
+      },
+    })
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Dodaj Web Shop</DialogTitle>
           <DialogDescription>
-            Povežite WooCommerce web shop sa OLX profilom
+            Povežite WooCommerce web shop koristeći AutoVendor plugin
           </DialogDescription>
         </DialogHeader>
 
-        <form className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="olx-profile">OLX Profil</Label>
-            <Select>
-              <SelectTrigger id="olx-profile" className="w-full">
-                <SelectValue placeholder="Odaberi profil" />
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="alpus">Alpus</SelectItem>
-                <SelectItem value="tech_store_ba">tech_store_ba</SelectItem>
-                <SelectItem value="auto_dijelovi">auto_dijelovi</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="woo-endpoint">Endpoint (Woo URL)</Label>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-4">
+          <Field data-invalid={!!errors.name || undefined}>
+            <FieldLabel htmlFor="name">Naziv shopa</FieldLabel>
             <Input
-              id="woo-endpoint"
-              placeholder="https://example.com/wp-json/wc/v3"
+              id="name"
+              placeholder="npr. Moj WooCommerce Shop"
+              {...form.register("name")}
             />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sync-interval">Interval sinhronizacije</Label>
-            <Select>
-              <SelectTrigger id="sync-interval" className="w-full">
-                <SelectValue placeholder="Odaberi interval" />
-              </SelectTrigger>
-              <SelectContent alignItemWithTrigger={false}>
-                <SelectItem value="1">1 sat</SelectItem>
-                <SelectItem value="3">3 sata</SelectItem>
-                <SelectItem value="6">6 sati</SelectItem>
-                <SelectItem value="12">12 sati</SelectItem>
-                <SelectItem value="24">24 sata</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </form>
+            <FieldError errors={errors.name ? [errors.name] : undefined} />
+          </Field>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Otkaži
+          <Field data-invalid={!!errors.store_url || undefined}>
+            <FieldLabel htmlFor="store_url">URL shopa</FieldLabel>
+            <Input
+              id="store_url"
+              placeholder="https://example.com"
+              {...form.register("store_url")}
+            />
+            <FieldError errors={errors.store_url ? [errors.store_url] : undefined} />
+          </Field>
+
+          <Field data-invalid={!!errors.api_key || undefined}>
+            <FieldLabel htmlFor="api_key">API ključ</FieldLabel>
+            <div className="relative">
+              <Input
+                id="api_key"
+                type="password"
+                placeholder="Unesite ključ iz plugina"
+                {...form.register("api_key")}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {testConnection.isPending && <Loader2Icon className="size-4 animate-spin text-muted-foreground" />}
+                {testConnection.isSuccess && testConnection.data?.ok && (
+                  <CheckCircle2Icon className="size-4 text-green-500" />
+                )}
+                {testConnection.isError && <XCircleIcon className="size-4 text-destructive" />}
+              </div>
+            </div>
+            <FieldError errors={errors.api_key ? [errors.api_key] : undefined} />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Ključ možete pronaći u postavkama AutoVendor plugina na vašem WordPress sajtu.
+            </p>
+          </Field>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={onTest}
+            disabled={testConnection.isPending}
+          >
+            {testConnection.isPending ? (
+              <Loader2Icon className="mr-2 size-4 animate-spin" />
+            ) : (
+              "Testiraj konekciju"
+            )}
           </Button>
-          <Button>Dodaj</Button>
-        </DialogFooter>
+
+          <DialogFooter className="mt-2">
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              Otkaži
+            </Button>
+            <Button type="submit" disabled={createStore.isPending}>
+              {createStore.isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              Dodaj
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

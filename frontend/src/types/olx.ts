@@ -9,6 +9,7 @@ export interface OlxAccount {
 
 export interface OlxListing {
   id: number;
+  account_id: number;
   title: string;
   description: string | null;
   price: number | null;

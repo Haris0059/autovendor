@@ -1,12 +1,43 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2Icon } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+
+function useAuthGuard(): "loading" | "authenticated" {
+  const router = useRouter();
+  const { isPending, isError } = useAuth();
+
+  useEffect(() => {
+    if (isError) {
+      router.replace("/login");
+    }
+  }, [isError, router]);
+
+  if (isPending || isError) return "loading";
+  return "authenticated";
+}
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const status = useAuthGuard();
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider
       style={
@@ -26,5 +57,5 @@ export default function DashboardLayout({
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

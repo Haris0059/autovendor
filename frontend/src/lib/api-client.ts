@@ -17,9 +17,18 @@ class ApiClient {
     return localStorage.getItem("access_token");
   }
 
+  private handle401() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("access_token");
+    if (!["/login", "/register", "/"].includes(window.location.pathname)) {
+      window.location.href = "/login";
+    }
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
+    rawBody = false
   ): Promise<T> {
     const { params, ...fetchOptions } = options;
 
@@ -30,26 +39,26 @@ class ApiClient {
     }
 
     const token = this.getToken();
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
-
-    if (token) {
-      (headers as Record<string, string>)["Authorization"] =
-        `Bearer ${token}`;
-    }
+    const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+    if (!rawBody) headers["Content-Type"] = "application/json";
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const response = await fetch(url, {
       ...fetchOptions,
       headers,
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.detail || "Request failed");
+    if (response.status === 401) {
+      this.handle401();
+      throw new ApiError(401, "Sesija je istekla. Prijavite se ponovo.");
     }
 
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, error.detail || "Zahtjev nije uspio.");
+    }
+
+    if (response.status === 204) return undefined as T;
     return response.json();
   }
 
@@ -73,18 +82,36 @@ class ApiClient {
     });
   }
 
+  patch<T>(endpoint: string, data?: unknown, options?: RequestOptions) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   delete<T>(endpoint: string, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
+  }
+
+  postForm<T>(endpoint: string, formData: FormData, options?: RequestOptions) {
+    return this.request<T>(
+      endpoint,
+      { ...options, method: "POST", body: formData },
+      true
+    );
   }
 }
 
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public detail?: string
   ) {
     super(message);
     this.name = "ApiError";
+    this.detail = detail ?? message;
   }
 }
 

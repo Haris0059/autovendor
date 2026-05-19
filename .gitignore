@@ -37,5 +37,17 @@ htmlcov/
 *.sqlite3
 alembic/versions/*.pyc
 
+# Credentials
+alpus.txt
+
+# Project docs (local only)
+PLAN.md
+
+# Claude Code
+.claude/
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
 # Misc
 *.log

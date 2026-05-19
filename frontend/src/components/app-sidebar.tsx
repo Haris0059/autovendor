@@ -26,23 +26,23 @@ import {
   TagsIcon,
   MegaphoneIcon,
   CircleHelpIcon,
-  SearchIcon,
   StoreIcon,
   PlusCircleIcon,
-  MapIcon,
+  SettingsIcon,
+  BarChart3Icon,
 } from "lucide-react"
 
 const data = {
-  user: {
-    name: "User",
-    email: "user@example.com",
-    avatar: "/avatars/default.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "Analitika",
+      url: "/analytics",
+      icon: <BarChart3Icon />,
     },
   ],
   navOlx: [
@@ -57,14 +57,9 @@ const data = {
       icon: <PackageIcon />,
     },
     {
-      title: "Dodavanje Artikala",
+      title: "Novi Artikal",
       url: "/listings/new",
       icon: <PlusCircleIcon />,
-    },
-    {
-      title: "Kategorije",
-      url: "/sync/mappings",
-      icon: <TagsIcon />,
     },
     {
       title: "Sponzorisano",
@@ -72,21 +67,21 @@ const data = {
       icon: <MegaphoneIcon />,
     },
   ],
-  navWoo: [
+  navSync: [
     {
       title: "WooCommerce",
       url: "/woocommerce",
       icon: <ShoppingCartIcon />,
     },
     {
-      title: "Mapiranje Artikala",
-      url: "/sync/mappings",
-      icon: <MapIcon />,
-    },
-    {
-      title: "Sync",
+      title: "Sinhronizacija",
       url: "/sync",
       icon: <RefreshCwIcon />,
+    },
+    {
+      title: "Mapiranje kategorija",
+      url: "/sync/mappings",
+      icon: <TagsIcon />,
     },
     {
       title: "Logovi",
@@ -96,14 +91,14 @@ const data = {
   ],
   navSecondary: [
     {
-      title: "Pomoć",
-      url: "#",
-      icon: <CircleHelpIcon />,
+      title: "Postavke",
+      url: "/settings",
+      icon: <SettingsIcon />,
     },
     {
-      title: "Pretraga",
+      title: "Pomoć i podrška",
       url: "#",
-      icon: <SearchIcon />,
+      icon: <CircleHelpIcon />,
     },
   ],
 }
@@ -118,20 +113,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
               render={<Link href="/dashboard" />}
             >
-              <StoreIcon className="size-5!" />
-              <span className="text-base font-semibold">AutoVendor</span>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <StoreIcon className="size-5!" />
+              </div>
+              <span className="text-base font-bold">AutoVendor</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSection label="OLX" items={data.navOlx} />
-        <NavSection label="WooCommerce" items={data.navWoo} />
+        <NavSection label="OLX Prodaja" items={data.navOlx} />
+        <NavSection label="Integracija" items={data.navSync} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   )

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
+import { BulkActionBar } from "@/components/listings/bulk-action-bar"
 import { ListingsTable } from "@/components/listings/listings-table"
 import { ListingsToolbar } from "@/components/listings/listings-toolbar"
 import { useActiveAccount } from "@/hooks/use-active-account"
@@ -33,6 +34,7 @@ export default function ListingsPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [perPage, setPerPage] = useState("10")
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   // If no active account but accounts have loaded, default to the first one.
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function ListingsPage() {
   const handleStatusChange = (value: StatusValue) => {
     setStatus(value)
     setPage(1)
+    setSelectedIds([])
   }
 
   const filteredListings = useMemo(() => {
@@ -68,6 +71,7 @@ export default function ListingsPage() {
     if (next) {
       setAccount(next)
       setPage(1)
+      setSelectedIds([])
     }
   }
 
@@ -96,12 +100,23 @@ export default function ListingsPage() {
         </TabsList>
       </Tabs>
 
+      {selectedIds.length > 0 && (
+        <BulkActionBar
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds([])}
+        />
+      )}
+
       <ListingsTable
         listings={filteredListings}
         isLoading={listingsQuery.isLoading}
         isError={listingsQuery.isError}
         hasAccount={!!activeAccount}
         total={total}
+        selectedIds={selectedIds}
+        onSelectedChange={setSelectedIds}
+        enableSelection
+        enableRowActions
       />
 
       {activeAccount && lastPage > 1 && (

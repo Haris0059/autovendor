@@ -510,16 +510,15 @@ function SidebarMenuButton({
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const { isMobile, state } = useSidebar()
+  const { nativeButton: _nativeButton, ...restProps } = props as Record<string, unknown>
+  void _nativeButton
   const comp = useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(
       {
         className: cn(sidebarMenuButtonVariants({ variant, size }), className),
       },
-      {
-        ...(props as any),
-        nativeButton: (props as any).nativeButton ?? (render ? false : undefined),
-      }
+      restProps as React.ComponentProps<"button">
     ),
     render: !tooltip ? render : <TooltipTrigger render={render} />,
     state: {

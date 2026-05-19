@@ -22,12 +22,13 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
 }
 
 function TooltipTrigger({ render, ...props }: TooltipPrimitive.Trigger.Props) {
+  const { nativeButton: _nativeButton, ...restProps } = props as Record<string, unknown>
+  void _nativeButton
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
       render={render}
-      {...( { nativeButton: render ? false : undefined } as { nativeButton?: boolean } )}
-      {...props}
+      {...(restProps as TooltipPrimitive.Trigger.Props)}
     />
   )
 }

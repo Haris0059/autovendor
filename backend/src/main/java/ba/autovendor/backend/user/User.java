@@ -30,7 +30,8 @@ public class User {
         this.createdAt = OffsetDateTime.now();
     }
 
-    protected User() {}
+    protected User() {
+    }
 
     public User(String email, String password, String name) {
         this.email = email;
@@ -41,9 +42,11 @@ public class User {
     public void setEmail(String email) {
         this.email = email;
     }
+
     public void setPassword(String password) {
         this.password = password;
     }
+
     public void setName(String name) {
         this.name = name;
     }

@@ -23,6 +23,9 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
 server:
   port: 8000
 
@@ -30,3 +33,8 @@ logging:
   level:
     org.hibernate.SQL: INFO
     org.springframework.security: INFO
+
+app:
+  jwt:
+    secret: "change-me-in-prod-this-must-be-at-least-32-bytes-long-base64-ideally"
+    expiration-hours: 168

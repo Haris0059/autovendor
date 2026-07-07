@@ -48,6 +48,18 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(ex.getMessage() != null ? ex.getMessage() : "Not found"));
     }
 
+    @ExceptionHandler(InvalidOlxCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidOlxCredentials(InvalidOlxCredentialsException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OlxApiException.class)
+    public ResponseEntity<ApiError> handleOlxApi(OlxApiException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new ApiError(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()

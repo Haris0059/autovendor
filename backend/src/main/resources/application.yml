@@ -38,3 +38,9 @@ app:
   jwt:
     secret: "change-me-in-prod-this-must-be-at-least-32-bytes-long-base64-ideally"
     expiration-hours: 168
+  crypto:
+    key: "bMMZJfJCK6BK2+AQ7YveAblZZtaXm7o1m5Z+gNHbIrc="
+  olx:
+    base-url: https://api.olx.ba
+    device-name: AutoVendor
+    token-ttl-days: 30

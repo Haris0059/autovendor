@@ -55,7 +55,11 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, error.detail || "Zahtjev nije uspio.");
+      let message = error.detail || "Zahtjev nije uspio.";
+      if (Array.isArray(error.errors) && error.errors.length > 0) {
+        message = `${message}: ${error.errors.join(", ")}`;
+      }
+      throw new ApiError(response.status, message);
     }
 
     if (response.status === 204) return undefined as T;

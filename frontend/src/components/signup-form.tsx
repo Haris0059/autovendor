@@ -24,7 +24,7 @@ import { toastMessages } from "@/lib/toast-messages";
 const signupSchema = z.object({
   name: z.string().min(2, "Ime mora imati najmanje 2 znaka."),
   email: z.string().min(1, "Email je obavezan.").email("Nevažeća email adresa."),
-  password: z.string().min(6, "Lozinka mora imati najmanje 6 znakova."),
+  password: z.string().min(8, "Lozinka mora imati najmanje 8 znakova."),
 });
 
 type SignupInput = z.infer<typeof signupSchema>;
@@ -103,7 +103,7 @@ export function SignupForm({
             <Input
               id="password"
               type="password"
-              placeholder="Najmanje 6 znakova"
+              placeholder="Najmanje 8 znakova"
               autoComplete="new-password"
               {...register("password")}
             />

@@ -304,7 +304,7 @@ Response shape `{detail: string}` matches what the frontend's `api-client.ts` al
 - `docker-compose.yml` (root) — add the `backend` service alongside postgres/redis (todo).
 - Root `.env.example` — stale FastAPI-era file; rewrite for the Spring env vars or delete (todo).
 - `frontend/.env.local` — set `NEXT_PUBLIC_USE_MOCKS=false` once endpoints are live; ensure `NEXT_PUBLIC_API_URL` points to backend.
-- `frontend/src/components/signup-form.tsx` — bump password Zod min from 6 to 8 to match the backend (todo, frontend PR).
+- ✅ `frontend/src/components/signup-form.tsx` — password Zod min bumped 6 → 8 to match the backend; `api-client.ts` now appends the backend's `errors[]` to error toasts.
 - `frontend/src/hooks/use-listings.ts`, `use-sponsored.ts`, `use-listing-limits.ts`, `use-listing-stats.ts`, `use-woo-stores.ts` — migrate from query/body `account_id` / `store_id` to path-based scoping (separate PR after backend live).
 
 **Read-only references during implementation:**

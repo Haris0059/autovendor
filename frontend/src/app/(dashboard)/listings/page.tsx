@@ -103,6 +103,7 @@ export default function ListingsPage() {
       {selectedIds.length > 0 && (
         <BulkActionBar
           selectedIds={selectedIds}
+          status={status}
           onClear={() => setSelectedIds([])}
         />
       )}

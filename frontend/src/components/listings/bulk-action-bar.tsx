@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   useDeleteListing,
   useListingAction,
+  LISTING_ACTIONS_BY_STATUS,
   type ListingAction,
 } from "@/hooks/use-listings";
 import { toastMessages } from "@/lib/toast-messages";
@@ -23,6 +24,8 @@ import { useState } from "react";
 
 interface BulkActionBarProps {
   selectedIds: number[];
+  /** Status of the currently shown tab — selection can only contain listings of this status. */
+  status: string;
   onClear: () => void;
 }
 
@@ -50,10 +53,14 @@ const ACTIONS: {
   { key: "unhide", label: "Otkrij", icon: EyeIcon, toastKey: "unhidden" },
 ];
 
-export function BulkActionBar({ selectedIds, onClear }: BulkActionBarProps) {
+export function BulkActionBar({ selectedIds, status, onClear }: BulkActionBarProps) {
   const action = useListingAction();
   const remove = useDeleteListing();
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const availableActions = ACTIONS.filter(({ key }) =>
+    (LISTING_ACTIONS_BY_STATUS[status] ?? []).includes(key)
+  );
 
   const runAction = async (key: ListingAction, toastKey: ToastKey) => {
     for (const id of selectedIds) {
@@ -82,7 +89,7 @@ export function BulkActionBar({ selectedIds, onClear }: BulkActionBarProps) {
           {selectedIds.length === 1 ? "odabran" : "odabranih"}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {ACTIONS.map(({ key, label, icon: Icon, toastKey }) => (
+          {availableActions.map(({ key, label, icon: Icon, toastKey }) => (
             <Button
               key={key}
               size="sm"

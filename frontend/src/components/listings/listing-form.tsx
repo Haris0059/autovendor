@@ -43,6 +43,7 @@ import {
 import {
   useCreateListing,
   useUpdateListing,
+  useUploadListingImages,
 } from "@/hooks/use-listings";
 import { useActiveAccount } from "@/hooks/use-active-account";
 import { toastMessages } from "@/lib/toast-messages";
@@ -78,6 +79,7 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
   const { account } = useActiveAccount();
   const create = useCreateListing();
   const update = useUpdateListing();
+  const uploadImages = useUploadListingImages();
 
   const isEdit = !!listing;
 
@@ -102,7 +104,8 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
       category_id: listing?.category_id ?? undefined,
       brand_id: undefined,
       model_id: undefined,
-      country_id: 1,
+      country_id: 49, // OLX id for Bosna i Hercegovina
+
       state_id: undefined,
       canton_id: undefined,
       city_id: listing?.city_id ?? undefined,
@@ -167,7 +170,17 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
     setValue("city_id", undefined);
   }, [cantonId, setValue]);
 
-  const isPending = create.isPending || update.isPending || isSubmitting;
+  const isPending =
+    create.isPending || update.isPending || uploadImages.isPending || isSubmitting;
+
+  const uploadNewImages = async (listingId: number) => {
+    const files = images
+      .filter((img) => img.file)
+      .map((img) => img.file as File);
+    if (files.length > 0) {
+      await uploadImages.mutateAsync({ listingId, files });
+    }
+  };
 
   const onSubmit = handleSubmit(async (data) => {
     if (!account && !isEdit) {
@@ -177,6 +190,7 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
     try {
       if (isEdit && listing) {
         await update.mutateAsync({ id: listing.id, ...data });
+        await uploadNewImages(listing.id);
         toast.success(toastMessages.updated);
         onSaved?.(listing.id);
       } else {
@@ -188,6 +202,7 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
           account_id: account.id,
           ...data,
         });
+        await uploadNewImages(created.id);
         toast.success(toastMessages.created);
         onSaved?.(created.id);
       }
@@ -507,7 +522,7 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                       value: String(c.id),
                       label: c.name,
                     }))}
-                    value="1"
+                    value="49"
                     onValueChange={() => {}}
                   >
                     <SelectTrigger id="country_id">

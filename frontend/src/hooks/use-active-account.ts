@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { OlxAccount } from "@/types/olx";
 
 interface ActiveAccountState {
@@ -6,7 +7,12 @@ interface ActiveAccountState {
   setAccount: (account: OlxAccount | null) => void;
 }
 
-export const useActiveAccount = create<ActiveAccountState>((set) => ({
-  account: null,
-  setAccount: (account) => set({ account }),
-}));
+export const useActiveAccount = create<ActiveAccountState>()(
+  persist(
+    (set) => ({
+      account: null,
+      setAccount: (account) => set({ account }),
+    }),
+    { name: "active-account" }
+  )
+);

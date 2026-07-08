@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { USE_MOCKS, mockDelay, paginate } from "@/lib/mocks";
 import { mockListings } from "@/lib/mocks/listings";
-import type { OlxListing } from "@/types/olx";
+import { useActiveAccount } from "@/hooks/use-active-account";
+import { useOlxAccounts } from "@/hooks/use-olx-accounts";
+import type { OlxListing, OlxImage } from "@/types/olx";
 import type { PaginatedResponse } from "@/types/api";
 
 interface ListingFilters {
@@ -13,6 +15,17 @@ interface ListingFilters {
 }
 
 const mockListingsStore: (OlxListing & { account_id: number })[] = [...mockListings];
+
+/**
+ * Single-listing operations need the owning OLX account for the path-scoped
+ * backend routes. Falls back to the first account when none is active yet
+ * (e.g. hard refresh on a detail page).
+ */
+function useResolvedAccountId(): number | null {
+  const { account } = useActiveAccount();
+  const accountsQuery = useOlxAccounts();
+  return account?.id ?? accountsQuery.data?.[0]?.id ?? null;
+}
 
 export function useListings(filters: ListingFilters) {
   return useQuery({
@@ -26,30 +39,32 @@ export function useListings(filters: ListingFilters) {
         );
         return mockDelay(paginate(filtered, filters.page ?? 1, filters.per_page ?? 10));
       }
-      return api.get<PaginatedResponse<OlxListing>>("/olx/listings", {
-        params: Object.fromEntries(
-          Object.entries(filters)
-            .filter(([, v]) => v !== undefined)
-            .map(([k, v]) => [k, String(v)])
-        ),
-      });
+      const params: Record<string, string> = {};
+      if (filters.status) params.status = filters.status;
+      if (filters.page) params.page = String(filters.page);
+      if (filters.per_page) params.per_page = String(filters.per_page);
+      return api.get<PaginatedResponse<OlxListing>>(
+        `/olx/accounts/${filters.account_id}/listings`,
+        { params }
+      );
     },
     enabled: !!filters.account_id,
   });
 }
 
 export function useListing(id: number) {
+  const accountId = useResolvedAccountId();
   return useQuery({
-    queryKey: ["listings", "single", id],
+    queryKey: ["listings", "single", accountId, id],
     queryFn: () => {
       if (USE_MOCKS) {
         const found = mockListingsStore.find((l) => l.id === id);
         if (!found) throw new Error("Artikal nije pronađen.");
         return mockDelay(found);
       }
-      return api.get<OlxListing>(`/olx/listings/${id}`);
+      return api.get<OlxListing>(`/olx/accounts/${accountId}/listings/${id}`);
     },
-    enabled: !!id,
+    enabled: !!id && (USE_MOCKS || !!accountId),
   });
 }
 
@@ -91,7 +106,8 @@ export function useCreateListing() {
         mockListingsStore.unshift(created);
         return mockDelay(created);
       }
-      return api.post<OlxListing>("/olx/listings", data);
+      const { account_id, ...body } = data;
+      return api.post<OlxListing>(`/olx/accounts/${account_id}/listings`, body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
@@ -101,6 +117,7 @@ export function useCreateListing() {
 
 export function useUpdateListing() {
   const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
 
   return useMutation({
     mutationFn: async (data: { id: number; [key: string]: unknown }) => {
@@ -119,7 +136,8 @@ export function useUpdateListing() {
         mockListingsStore[idx] = merged;
         return mockDelay(merged);
       }
-      return api.put<OlxListing>(`/olx/listings/${data.id}`, data);
+      const { id, ...body } = data;
+      return api.put<OlxListing>(`/olx/accounts/${accountId}/listings/${id}`, body);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
@@ -129,6 +147,7 @@ export function useUpdateListing() {
 
 export function useDeleteListing() {
   const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -137,7 +156,7 @@ export function useDeleteListing() {
         if (idx !== -1) mockListingsStore.splice(idx, 1);
         return mockDelay(undefined);
       }
-      return api.delete(`/olx/listings/${id}`);
+      return api.delete(`/olx/accounts/${accountId}/listings/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings"] });
@@ -151,6 +170,16 @@ export type ListingAction =
   | "hide"
   | "unhide"
   | "refresh";
+
+/** Which actions make sense for a listing in a given status. */
+export const LISTING_ACTIONS_BY_STATUS: Record<string, ListingAction[]> = {
+  active: ["refresh", "hide", "finish"],
+  hidden: ["unhide", "finish"],
+  draft: ["publish"],
+  inactive: ["publish"],
+  expired: ["publish"],
+  finished: ["publish"],
+};
 
 function applyStatus(action: ListingAction): string | null {
   switch (action) {
@@ -169,6 +198,7 @@ function applyStatus(action: ListingAction): string | null {
 
 export function useListingAction() {
   const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
 
   return useMutation({
     mutationFn: async (vars: { id: number; action: ListingAction }) => {
@@ -184,9 +214,63 @@ export function useListingAction() {
         }
         return mockDelay({ ok: true });
       }
-      const endpoint = `/olx/listings/${vars.id}/${vars.action}`;
+      const endpoint = `/olx/accounts/${accountId}/listings/${vars.id}/${vars.action}`;
       if (vars.action === "refresh") return api.put(endpoint);
       return api.post(endpoint);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
+}
+
+export function useUploadListingImages() {
+  const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
+
+  return useMutation({
+    mutationFn: async (vars: { listingId: number; files: File[] }) => {
+      if (USE_MOCKS) return mockDelay([] as OlxImage[]);
+      const formData = new FormData();
+      for (const file of vars.files) formData.append("images", file);
+      return api.postForm<OlxImage[]>(
+        `/olx/accounts/${accountId}/listings/${vars.listingId}/images`,
+        formData
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
+}
+
+export function useDeleteListingImage() {
+  const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
+
+  return useMutation({
+    mutationFn: async (vars: { listingId: number; imageId: number }) => {
+      if (USE_MOCKS) return mockDelay(undefined);
+      return api.delete(
+        `/olx/accounts/${accountId}/listings/${vars.listingId}/images/${vars.imageId}`
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+    },
+  });
+}
+
+export function useSetMainListingImage() {
+  const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
+
+  return useMutation({
+    mutationFn: async (vars: { listingId: number; imageId: number }) => {
+      if (USE_MOCKS) return mockDelay(undefined);
+      return api.post(
+        `/olx/accounts/${accountId}/listings/${vars.listingId}/images/${vars.imageId}/main`
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["listings"] });

@@ -41,6 +41,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   useDeleteListing,
   useListingAction,
+  LISTING_ACTIONS_BY_STATUS,
   type ListingAction,
 } from "@/hooks/use-listings";
 import { toastMessages } from "@/lib/toast-messages";
@@ -273,7 +274,11 @@ export function ListingsTable({
                 Slike
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {ROW_ACTIONS.map(({ key, label, icon: Icon, toastKey }) => (
+              {ROW_ACTIONS.filter(({ key }) =>
+                (
+                  LISTING_ACTIONS_BY_STATUS[row.original.status] ?? []
+                ).includes(key)
+              ).map(({ key, label, icon: Icon, toastKey }) => (
                 <DropdownMenuItem
                   key={key}
                   onClick={() => runAction(row.original, key, toastKey)}

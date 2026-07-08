@@ -17,7 +17,7 @@ import {
   ImageUploader,
   type UploaderImage,
 } from "@/components/shared/image-uploader";
-import { useListing, useUpdateListing } from "@/hooks/use-listings";
+import { useListing, useUploadListingImages } from "@/hooks/use-listings";
 import { toastMessages } from "@/lib/toast-messages";
 
 export default function ListingImagesPage({
@@ -29,7 +29,7 @@ export default function ListingImagesPage({
   const listingId = Number(id);
 
   const listing = useListing(listingId);
-  const update = useUpdateListing();
+  const upload = useUploadListingImages();
 
   const [draft, setDraft] = useState<UploaderImage[] | null>(null);
 
@@ -46,22 +46,35 @@ export default function ListingImagesPage({
   const images = draft ?? serverImages;
   const setImages = (next: UploaderImage[]) => setDraft(next);
 
-  const handleSave = () => {
-    update.mutate(
-      {
-        id: listingId,
-        images: images.map((img, idx) => ({
-          url: img.url,
-          is_main: img.is_main,
-          order: idx,
-        })),
-      },
-      {
-        onSuccess: () => toast.success(toastMessages.saved),
-        onError: (err) =>
-          toast.error(err.message || toastMessages.errorSave),
-      }
+  const handleSave = async () => {
+    // OLX listing responses don't expose image ids, so existing (remote) images
+    // can't be removed/reordered from here yet — only new uploads are sent.
+    const newFiles = images
+      .filter((img) => img.file)
+      .map((img) => img.file as File);
+    const removedRemote = serverImages.some(
+      (s) => !images.find((i) => i.id === s.id)
     );
+
+    if (newFiles.length === 0) {
+      toast.info(
+        removedRemote
+          ? "Uklanjanje postojećih slika još nije podržano."
+          : "Nema novih slika za upload."
+      );
+      return;
+    }
+
+    try {
+      await upload.mutateAsync({ listingId, files: newFiles });
+      toast.success(toastMessages.saved);
+      setDraft(null);
+      if (removedRemote) {
+        toast.info("Uklanjanje postojećih slika još nije podržano.");
+      }
+    } catch (err) {
+      toast.error((err as Error).message || toastMessages.errorSave);
+    }
   };
 
   if (listing.isLoading) {
@@ -102,8 +115,8 @@ export default function ListingImagesPage({
             </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={update.isPending}>
-          {update.isPending ? (
+        <Button onClick={handleSave} disabled={upload.isPending}>
+          {upload.isPending ? (
             <Loader2Icon className="animate-spin" />
           ) : (
             <SaveIcon />

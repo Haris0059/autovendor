@@ -18,6 +18,7 @@ public record OlxListingDto(
         String shortDescription,
         String skuNumber,
         OlxListingAdditionalDto additional,
+        String image,
         List<String> images,
         Long createdAt,
         Long date

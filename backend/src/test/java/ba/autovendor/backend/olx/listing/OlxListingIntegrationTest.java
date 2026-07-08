@@ -119,6 +119,19 @@ class OlxListingIntegrationTest {
     }
 
     @Test
+    void thumbnailFallsBackWhenImagesListIsNull() throws Exception {
+        // Some list endpoints (e.g. finished) return images: null with only `image` set.
+        when(olxApiClient.getListingsByStatus(TOKEN, OLX_USER_ID, "finished", 1, null))
+                .thenReturn(page(List.of(listingWithThumbnailOnly(5L, "finished")), 1, 1, 20, 1));
+
+        mockMvc.perform(get(base() + "?status=finished").header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].images", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].images[0].url").value("https://img/thumb.jpg"))
+                .andExpect(jsonPath("$.data[0].images[0].is_main").value(true));
+    }
+
+    @Test
     void hiddenListingsGetStatusOverride() throws Exception {
         // OLX's /hidden endpoint returns items whose status field still says "active".
         when(olxApiClient.getListingsByStatus(TOKEN, OLX_USER_ID, "hidden", 1, null))
@@ -312,7 +325,18 @@ class OlxListingIntegrationTest {
                 id, "Test artikal", 10.5, true, 299L, 39L, null,
                 "sell", "used", status, null, null, "Kratki opis", null,
                 new OlxListingDto.OlxListingAdditionalDto("<p>Opis</p>"),
+                null,
                 List.of("https://img/1.jpg", "https://img/2.jpg"),
+                1749494992L, 1781513914L
+        );
+    }
+
+    private static OlxListingDto listingWithThumbnailOnly(Long id, String status) {
+        return new OlxListingDto(
+                id, "Test artikal", 10.5, true, 299L, 39L, null,
+                "sell", "used", status, null, null, "Kratki opis", null,
+                null,
+                "https://img/thumb.jpg", null,
                 1749494992L, 1781513914L
         );
     }

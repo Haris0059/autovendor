@@ -50,9 +50,14 @@ public final class ListingMapper {
 
     // OLX listing responses carry image URLs only (no ids) — real image ids exist
     // only in the image-upload response. Index-based ids keep the frontend shape.
+    // Some list endpoints (e.g. finished) return images: null but still provide
+    // the single `image` thumbnail — fall back to it.
     private static List<ListingResponse.ListingImageResponse> images(OlxListingDto dto) {
         List<ListingResponse.ListingImageResponse> images = new ArrayList<>();
-        if (dto.images() == null) {
+        if (dto.images() == null || dto.images().isEmpty()) {
+            if (dto.image() != null) {
+                images.add(new ListingResponse.ListingImageResponse(0L, dto.image(), true));
+            }
             return images;
         }
         for (int i = 0; i < dto.images().size(); i++) {

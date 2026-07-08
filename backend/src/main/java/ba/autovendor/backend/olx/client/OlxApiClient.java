@@ -6,17 +6,26 @@ import ba.autovendor.backend.common.OlxAuthException;
 import ba.autovendor.backend.olx.client.dto.OlxAttributeDto;
 import ba.autovendor.backend.olx.client.dto.OlxCategoryDto;
 import ba.autovendor.backend.olx.client.dto.OlxCountryDto;
+import ba.autovendor.backend.olx.client.dto.OlxImageDto;
+import ba.autovendor.backend.olx.client.dto.OlxListingDto;
+import ba.autovendor.backend.olx.client.dto.OlxListingPageDto;
 import ba.autovendor.backend.olx.client.dto.OlxNamedDto;
 import ba.autovendor.backend.olx.client.dto.OlxStateDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Component
 public class OlxApiClient {
@@ -39,14 +48,17 @@ public class OlxApiClient {
 
     private final RestClient restClient;
     private final String deviceName;
+    private final ObjectMapper objectMapper;
 
     public OlxApiClient(
             RestClient.Builder builder,
             @Value("${app.olx.base-url}") String baseUrl,
-            @Value("${app.olx.device-name}") String deviceName
+            @Value("${app.olx.device-name}") String deviceName,
+            ObjectMapper objectMapper
     ) {
         this.restClient = builder.baseUrl(baseUrl).build();
         this.deviceName = deviceName;
+        this.objectMapper = objectMapper;
     }
 
     public OlxLoginResult login(String username, String password) {
@@ -108,6 +120,180 @@ public class OlxApiClient {
         return get("/cities", STATES);
     }
 
+    public OlxListingPageDto getActiveListings(String token, String username, int page, Integer perPage) {
+        return exchange(() -> restClient.get()
+                .uri(listUri("/users/" + username + "/listings", page, perPage))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(OlxListingPageDto.class));
+    }
+
+    public OlxListingPageDto getListingsByStatus(String token, long olxUserId, String status, int page, Integer perPage) {
+        return exchange(() -> restClient.get()
+                .uri(listUri("/users/" + olxUserId + "/listings/" + status, page, perPage))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(OlxListingPageDto.class));
+    }
+
+    public OlxListingDto getListing(String token, long listingId) {
+        return unwrap(exchange(() -> restClient.get()
+                .uri("/listings/" + listingId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(JsonNode.class)), OlxListingDto.class);
+    }
+
+    public OlxListingDto createListing(String token, Map<String, Object> payload) {
+        return unwrap(exchange(() -> restClient.post()
+                .uri("/listings")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(payload)
+                .retrieve()
+                .body(JsonNode.class)), OlxListingDto.class);
+    }
+
+    public OlxListingDto updateListing(String token, long listingId, Map<String, Object> payload) {
+        return unwrap(exchange(() -> restClient.put()
+                .uri("/listings/" + listingId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(payload)
+                .retrieve()
+                .body(JsonNode.class)), OlxListingDto.class);
+    }
+
+    public void deleteListing(String token, long listingId) {
+        exchange(() -> restClient.delete()
+                .uri("/listings/" + listingId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    public void publishListing(String token, long listingId) {
+        actionPost(token, listingId, "publish");
+    }
+
+    public void finishListing(String token, long listingId) {
+        actionPost(token, listingId, "finish");
+    }
+
+    public void hideListing(String token, long listingId) {
+        actionPost(token, listingId, "hide");
+    }
+
+    public void unhideListing(String token, long listingId) {
+        actionPost(token, listingId, "unhide");
+    }
+
+    public void refreshListing(String token, long listingId) {
+        exchange(() -> restClient.put()
+                .uri("/listings/" + listingId + "/refresh")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    public List<OlxImageDto> uploadImages(String token, long listingId, List<MultipartFile> images) {
+        MultipartBodyBuilder body = new MultipartBodyBuilder();
+        for (MultipartFile image : images) {
+            body.part("images[]", image.getResource());
+        }
+        JsonNode node = exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/image-upload")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body.build())
+                .retrieve()
+                .body(JsonNode.class));
+        JsonNode data = node != null && node.has("data") ? node.get("data") : node;
+        return objectMapper.convertValue(data,
+                objectMapper.getTypeFactory().constructCollectionType(List.class, OlxImageDto.class));
+    }
+
+    public void deleteImage(String token, long listingId, long imageId) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/image-delete")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of("imageId", imageId))
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    public void setMainImage(String token, long listingId, long imageId) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/image-main")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of("imageId", imageId))
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    private void actionPost(String token, long listingId, String action) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/" + action)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    private static String listUri(String path, int page, Integer perPage) {
+        String uri = path + "?page=" + page;
+        return perPage != null ? uri + "&per_page=" + perPage : uri;
+    }
+
+    private <T> T unwrap(JsonNode node, Class<T> type) {
+        if (node == null) {
+            throw new OlxApiException("OLX returned an empty response");
+        }
+        JsonNode data = node.has("data") ? node.get("data") : node;
+        return objectMapper.convertValue(data, type);
+    }
+
+    /**
+     * Runs an authenticated OLX call, translating auth rejections (401/403) into
+     * {@link OlxAuthException} so {@link OlxTokenManager#withAccountToken} can re-login once.
+     */
+    private <T> T exchange(Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 401 || status == 403) {
+                throw new OlxAuthException("OLX rejected the account token");
+            }
+            throw olxError(e);
+        } catch (OlxApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new OlxApiException("OLX API is unreachable", e);
+        }
+    }
+
+    /** Surfaces OLX's own error message (e.g. refresh limits) instead of a bare status code. */
+    private OlxApiException olxError(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        String detail = "OLX request failed with status " + status;
+        try {
+            JsonNode body = objectMapper.readTree(e.getResponseBodyAsString());
+            JsonNode message = body.has("message") ? body.get("message") : body.get("error");
+            if (message != null && message.isString() && !message.asString().isBlank()) {
+                detail = message.asString();
+            }
+        } catch (Exception ignored) {
+            // Non-JSON error body — keep the generic message.
+        }
+        return new OlxApiException(detail, e, status);
+    }
+
+    <T> T authGet(String path, String token, Class<T> type) {
+        return exchange(() -> restClient.get()
+                .uri(path)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(type));
+    }
+
     private <T> List<T> get(String path, ParameterizedTypeReference<DataEnvelope<T>> type) {
         DataEnvelope<T> envelope;
         try {
@@ -116,29 +302,11 @@ public class OlxApiClient {
                     .retrieve()
                     .body(type);
         } catch (RestClientResponseException e) {
-            throw new OlxApiException("OLX request " + path + " failed with status " + e.getStatusCode().value(), e);
+            throw olxError(e);
         } catch (Exception e) {
             throw new OlxApiException("OLX API is unreachable", e);
         }
         return envelope != null && envelope.data() != null ? envelope.data() : List.of();
-    }
-
-    <T> T authGet(String path, String token, Class<T> type) {
-        try {
-            return restClient.get()
-                    .uri(path)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                    .retrieve()
-                    .body(type);
-        } catch (RestClientResponseException e) {
-            int status = e.getStatusCode().value();
-            if (status == 401 || status == 403) {
-                throw new OlxAuthException("OLX rejected the account token");
-            }
-            throw new OlxApiException("OLX request " + path + " failed with status " + status, e);
-        } catch (Exception e) {
-            throw new OlxApiException("OLX API is unreachable", e);
-        }
     }
 
     record DataEnvelope<T>(List<T> data) {

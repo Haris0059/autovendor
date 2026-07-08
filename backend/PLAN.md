@@ -16,8 +16,15 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
 3. ✅ **OLX accounts** (commit `a968cff`) — `olx_accounts` (V2), AES-GCM `EncryptionService` + `EncryptedStringConverter`, `/olx/accounts` CRUD scoped per user, `OlxApiClient.login` called on create and on credential update; verified once against the real OLX API.
 4. ✅ **OLX proxy basics** — `OlxApiClient` catalog methods + `authGet` (throws `OlxAuthException` on 401/403), `OlxTokenManager` (5-min refresh skew, one-retry-on-rejection via `withAccountToken`), `/olx/categories*` + `/locations/*` proxies with Redis caching (`olx-categories` 24h, `olx-locations` 7d). Key findings: OLX catalog/location endpoints are **public** (no Bearer needed); responses wrapped in `{"data": ...}`; `/cities` is a state→canton→city tree (cantons exist for RS/Brčko too, as regions); attribute `options` is `List<String>`; cached values must be `ArrayList`s (the Redis JSON serializer can't reconstruct JDK immutable lists).
+5. ✅ **OLX listings** — **path-scoped** `/olx/accounts/{accountId}/listings...` (CRUD, publish/finish/hide/unhide, refresh, multipart image upload/delete/main) + user-wide `GET /olx/listings/all` (all accounts × statuses, page cap 10/status, Redis-cached 5 min in `olx-listings-all`, evicted on mutations). Frontend `use-listings.ts` refactored to the path-scoped routes (mutations resolve the account internally; active account now persisted in localStorage). Verified live with a draft lifecycle on the real account. **OLX gotchas found (July 2026):**
+   - ⚠️ `PUT /listings/{id}` on a **draft publishes it** (status flips to active) — there is no way back to draft.
+   - There is **no endpoint to list drafts** (`/inactive` does NOT contain them; `/listings/draft(s)` etc. 404) — drafts are reachable only by id after creation. Dashboard stats therefore can't count drafts.
+   - `/users/{id}/listings/hidden` returns items whose `status` field still says `active` → backend forces `status=hidden` on that route.
+   - `city_id` is only persisted when `country_id` is sent along (BiH = **49**, not 1 — frontend form default fixed).
+   - List envelope is `{data, meta:{total,last_page,current_page,per_page}}` (docs claimed top-level fields); `per_page` IS honored despite being undocumented.
+   - Listing responses carry image **URLs only** (no image ids); ids exist only in the image-upload response — so existing remote images can't be deleted/re-mained after a refetch (frontend shows "not supported yet" for that).
 
-**Next: step 5** — OLX listings: CRUD + status transitions, image upload, refresh (first real consumer of `OlxTokenManager.withAccountToken`).
+**Next: step 6** — WooCommerce: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
 
 ---
 
@@ -64,8 +71,8 @@ backend/
     ├── crypto/              ✅ EncryptionService (AES-GCM), EncryptedStringConverter (JPA converter)
     ├── olx/
     │   ├── account/         ✅ OlxAccount entity, OlxAccountController/Service/Repository/Mapper, dto/
-    │   ├── client/          🔶 OlxApiClient (login + catalog + authGet), OlxTokenManager, dto/; todo: listing ops
-    │   ├── listing/         ListingController, ListingService, dto/
+    │   ├── client/          🔶 OlxApiClient (login, catalog, listing ops, multipart images), OlxTokenManager, dto/; todo: sponsor/discount/limits ops
+    │   ├── listing/         ✅ ListingController (path-scoped), AllListingsController, ListingService, ListingMapper, dto/
     │   ├── category/        ✅ CategoryController, CategoryService (Redis-cached, 24h), CategoryMapper, dto/
     │   ├── location/        ✅ LocationController, LocationService (Redis-cached, 7d), dto/
     │   ├── sponsor/         SponsorController, DiscountController
@@ -83,7 +90,7 @@ backend/
     ├── webhook/             WebhookController (receives plugin events)
     ├── analytics/           AnalyticsController, AnalyticsService
     ├── jobs/                FullSyncJob, StockSyncJob, TokenRefreshJob
-    └── common/              🔶 ApiError ✅, GlobalExceptionHandler ✅, OLX exceptions ✅; todo: PageResponse<T>
+    └── common/              ✅ ApiError, GlobalExceptionHandler, OLX exceptions, PageResponse<T>
 ```
 
 Conventions in the code so far: DTOs are Java records; mappers are static utility classes (`UserMapper.toResponse`); constructor injection, no Lombok on services (entities use `@Getter`); Jackson global snake_case means camelCase record fields serialize as `snake_case` automatically.
@@ -126,7 +133,7 @@ The frontend currently passes `account_id` as a query/body field. The backend wi
 - Ownership checks: the accounts CRUD (done) uses **repository-scoped queries** (`findByIdAndUserId`) and returns **404** for other users' resources — this hides existence and needs no aspect. Keep the same pattern for nested resources: resolve `{accountId}` through `findByIdAndUserId` at the top of the service method (404 if not owned) instead of a separate `@AccountOwned` aspect, unless duplication grows.
 - WooCommerce store scoping mirrors this: `/woo/stores/{storeId}/...`.
 
-> **Frontend follow-up**: the existing hooks in `frontend/src/hooks/` (`use-listings`, `use-listing-limits`, `use-listing-stats`, `use-sponsored`, `use-woo-stores`'s nested resources) will need to switch from query-param scoping to path-param scoping. This is a mechanical refactor — track it as a separate PR after the backend is up.
+> **Frontend follow-up**: ✅ `use-listings` switched to path-param scoping (mutations resolve the active account internally via `useActiveAccount`, persisted in localStorage, with first-account fallback). Still pending when their slices land: `use-listing-limits`, `use-listing-stats`, `use-sponsored`, `use-woo-stores`'s nested resources.
 
 ---
 
@@ -146,15 +153,13 @@ Grouped to mirror frontend hooks. All under `Authorization: Bearer <jwt>` unless
 - `PUT    /olx/accounts/{accountId}` — re-logs-in to OLX only when username/password change (username-only change decrypts the stored password); `default_city_id`-only updates never call OLX
 - `DELETE /olx/accounts/{accountId}` — 204
 
-### OLX listings (`/olx/accounts/{accountId}/listings`)
-- `GET    .` — `?status&page&per_page`
-- `GET    ./all`
-- `GET    /olx/listings/{id}`  *(global lookup; service still checks ownership via account)*
-- `POST   .` — create draft
-- `PUT    /olx/listings/{id}`
-- `DELETE /olx/listings/{id}`
-- `POST   /olx/listings/{id}/publish | /finish | /hide | /unhide`
-- `PUT    /olx/listings/{id}/refresh`
+### OLX listings (`/olx/accounts/{accountId}/listings`) ✅
+- `GET    .` — `?status&page&per_page` → `PageResponse`; status routes: active → `/users/{username}/listings`, others → `/users/{olxUserId}/listings/{status}`; `draft` aliases `inactive` (but see gotcha: OLX can't list drafts)
+- `GET    /olx/listings/all` — user-wide aggregate (dashboard), Redis-cached 5 min, evicted on mutations
+- `POST   .` — 201, creates OLX draft; payload whitelisted (frontend-only fields like `top_category_id` stripped)
+- `GET/PUT/DELETE ./{listingId}` — ⚠️ PUT on a draft publishes it (OLX behavior)
+- `POST   ./{listingId}/publish | /finish | /hide | /unhide`; `PUT ./{listingId}/refresh`
+- `POST   ./{listingId}/images` (multipart `images`), `DELETE ./{listingId}/images/{imageId}`, `POST ./{listingId}/images/{imageId}/main`
 
 ### OLX categories (`/olx/categories`, Redis-cached 24h) ✅
 - `GET /olx/categories` — `{id, name, slug, parent_id}[]`
@@ -322,7 +327,7 @@ Response shape `{detail: string}` matches what the frontend's `api-client.ts` al
 2. ✅ **Auth**: User entity, register, login, `GET /auth/me`, JWT filter, Spring Security config. (commit `4861884`)
 3. ✅ **OLX accounts**: entity, encryption, CRUD, OLX login on create + credential update. (commit `a968cff`)
 4. ✅ **OLX proxy basics**: `OlxApiClient` + `OlxTokenManager`, categories + locations with Redis caching.
-5. **OLX listings**: CRUD + status transitions, image upload, refresh.
+5. ✅ **OLX listings**: path-scoped CRUD + status transitions, image upload, refresh; frontend hooks refactored to path scoping.
 6. **WooCommerce**: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
 7. **Sync foundations**: `product_links`, `category_mappings`, `sync_logs`, manual `POST /sync`.
 8. **Sync engine**: full sync flow, hash comparison, image pipeline.

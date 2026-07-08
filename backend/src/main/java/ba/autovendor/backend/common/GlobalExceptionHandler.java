@@ -56,7 +56,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(OlxApiException.class)
     public ResponseEntity<ApiError> handleOlxApi(OlxApiException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+        // Upstream 4xx means the request was refused (limits, validation, ...) —
+        // surface it as a client error; 5xx/connectivity stays a gateway problem.
+        boolean clientError = ex.getUpstreamStatus() >= 400 && ex.getUpstreamStatus() < 500;
+        return ResponseEntity.status(clientError ? HttpStatus.BAD_REQUEST : HttpStatus.BAD_GATEWAY)
                 .body(new ApiError(ex.getMessage()));
     }
 

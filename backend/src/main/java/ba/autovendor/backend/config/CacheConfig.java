@@ -34,6 +34,7 @@ public class CacheConfig {
                 .cacheDefaults(defaults)
                 .withCacheConfiguration("olx-categories", defaults.entryTtl(Duration.ofHours(24)))
                 .withCacheConfiguration("olx-locations", defaults.entryTtl(Duration.ofDays(7)))
+                .withCacheConfiguration("olx-listings-all", defaults.entryTtl(Duration.ofMinutes(5)))
                 .build();
     }
 }

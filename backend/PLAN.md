@@ -15,8 +15,9 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
 3. ✅ **OLX accounts** (commit `a968cff`) — `olx_accounts` (V2), AES-GCM `EncryptionService` + `EncryptedStringConverter`, `/olx/accounts` CRUD scoped per user, `OlxApiClient.login` called on create and on credential update; verified once against the real OLX API.
+4. ✅ **OLX proxy basics** — `OlxApiClient` catalog methods + `authGet` (throws `OlxAuthException` on 401/403), `OlxTokenManager` (5-min refresh skew, one-retry-on-rejection via `withAccountToken`), `/olx/categories*` + `/locations/*` proxies with Redis caching (`olx-categories` 24h, `olx-locations` 7d). Key findings: OLX catalog/location endpoints are **public** (no Bearer needed); responses wrapped in `{"data": ...}`; `/cities` is a state→canton→city tree (cantons exist for RS/Brčko too, as regions); attribute `options` is `List<String>`; cached values must be `ArrayList`s (the Redis JSON serializer can't reconstruct JDK immutable lists).
 
-**Next: step 4** — expand `OlxApiClient`, add `OlxTokenManager`, categories + locations proxy (Redis-cached).
+**Next: step 5** — OLX listings: CRUD + status transitions, image upload, refresh (first real consumer of `OlxTokenManager.withAccountToken`).
 
 ---
 
@@ -57,16 +58,16 @@ backend/
 ├── Dockerfile               (todo)
 └── src/main/java/ba/autovendor/backend/
     ├── BackendApplication.java  ✅
-    ├── config/              ✅ SecurityConfig, JwtAuthenticationFilter (todo: AsyncConfig if needed)
+    ├── config/              ✅ SecurityConfig, JwtAuthenticationFilter, CacheConfig (todo: AsyncConfig if needed)
     ├── auth/                ✅ AuthController, AuthService, JwtService, dto/
     ├── user/                ✅ User entity, UserRepository, UserMapper, dto/
     ├── crypto/              ✅ EncryptionService (AES-GCM), EncryptedStringConverter (JPA converter)
     ├── olx/
     │   ├── account/         ✅ OlxAccount entity, OlxAccountController/Service/Repository/Mapper, dto/
-    │   ├── client/          🔶 OlxApiClient (login only so far), OlxLoginResult; todo: OlxTokenManager + full proxy
+    │   ├── client/          🔶 OlxApiClient (login + catalog + authGet), OlxTokenManager, dto/; todo: listing ops
     │   ├── listing/         ListingController, ListingService, dto/
-    │   ├── category/        CategoryController, CategoryService (Redis-cached)
-    │   ├── location/        LocationController, LocationService (Redis-cached)
+    │   ├── category/        ✅ CategoryController, CategoryService (Redis-cached, 24h), CategoryMapper, dto/
+    │   ├── location/        ✅ LocationController, LocationService (Redis-cached, 7d), dto/
     │   ├── sponsor/         SponsorController, DiscountController
     │   └── limit/           LimitController
     ├── woo/
@@ -155,18 +156,18 @@ Grouped to mirror frontend hooks. All under `Authorization: Bearer <jwt>` unless
 - `POST   /olx/listings/{id}/publish | /finish | /hide | /unhide`
 - `PUT    /olx/listings/{id}/refresh`
 
-### OLX categories (`/olx/categories`, cached)
-- `GET /olx/categories`
-- `GET /olx/categories/{parentId}`
-- `GET /olx/categories/{id}/attributes`
+### OLX categories (`/olx/categories`, Redis-cached 24h) ✅
+- `GET /olx/categories` — `{id, name, slug, parent_id}[]`
+- `GET /olx/categories/{parentId}` — children, same shape
+- `GET /olx/categories/{id}/attributes` — `{type, name, input_type, display_name, options: string[], required}[]`
 - `GET /olx/categories/{id}/brands`
 - `GET /olx/categories/{id}/brands/{brandId}/models`
 
-### Locations (`/locations`, cached, no auth needed in dev)
-- `GET /locations/countries`
-- `GET /locations/states`
-- `GET /locations/cantons`
-- `GET /locations/cities`
+### Locations (`/locations`, Redis-cached 7d, behind our JWT like everything else) ✅
+- `GET /locations/countries` — `{id, name, code}[]` (passthrough from OLX `/countries`)
+- `GET /locations/states` — `{id, name, code}[]` (from OLX `/country-states`)
+- `GET /locations/cantons` — `{id, name, state_id}[]` (flattened from `/country-states`; no standalone OLX endpoint)
+- `GET /locations/cities` — `{id, name, zip_code: null, latitude, longitude, canton_id, state_id}[]` (flattened from the `/cities` tree; bulk zip codes aren't available upstream and the frontend doesn't display them)
 
 ### Sponsoring & discounts (`/olx/accounts/{accountId}`)
 - `GET    .../sponsored`
@@ -220,7 +221,8 @@ Reference for exact request/response shapes: the frontend hooks under `frontend/
 - Login ✅: `POST /auth/login` `{username, password, device_name}` → `{token, user}`. Token is a Laravel-Sanctum-style Bearer string. Base URL, device name (`AutoVendor`) and token TTL are config (`app.olx.*`).
 - **OLX does not document token lifetime** — we assume `app.olx.token-ttl-days` (30) and set `token_expires_at = login + TTL`. Treat it as a guess: `OlxTokenManager` must also re-login lazily when OLX rejects a token (remember: OLX returns **403/404, not 401**, for bad auth).
 - All subsequent calls: `Authorization: Bearer <token>`.
-- `OlxTokenManager` (step 4, todo) is responsible for: decrypting the stored password, re-login when `token_expires_at` is within 5 min or a request comes back 403/404-unauthenticated, persisting the new token (encrypted) + new expiry. Never re-login in a loop — one retry per request, then surface the error.
+- `OlxTokenManager` ✅ — decrypts the stored password (via the JPA converter), re-logs-in when `token_expires_at` is within 5 min, persists the new token (encrypted) + expiry; `withAccountToken(account, call)` retries exactly once when the call throws `OlxAuthException` (thrown by `OlxApiClient.authGet` on 401/403), then lets it propagate. First real consumer: listings (step 5).
+- Catalog/location endpoints turned out to be **public** — proxied without a token.
 - Listing CRUD, image upload (multipart `images[]` or `image_url`), set main image, publish/finish/hide/unhide/refresh, sponsor + discount, categories, locations, limits — all proxied through `OlxApiClient`.
 - Rate limits not documented → conservative: retry once on 429 with jitter; surface failures into `sync_logs`.
 
@@ -319,7 +321,7 @@ Response shape `{detail: string}` matches what the frontend's `api-client.ts` al
 1. ✅ **Bootstrap**: `pom.xml`, `application.yml`, Flyway baseline. *(Deferred leftovers: `backend` service in docker-compose, Dockerfile, actuator healthcheck — fold into a later step.)*
 2. ✅ **Auth**: User entity, register, login, `GET /auth/me`, JWT filter, Spring Security config. (commit `4861884`)
 3. ✅ **OLX accounts**: entity, encryption, CRUD, OLX login on create + credential update. (commit `a968cff`)
-4. **OLX proxy basics**: `OlxApiClient` + `OlxTokenManager`, then categories + locations (cacheable, no scoping headaches).
+4. ✅ **OLX proxy basics**: `OlxApiClient` + `OlxTokenManager`, categories + locations with Redis caching.
 5. **OLX listings**: CRUD + status transitions, image upload, refresh.
 6. **WooCommerce**: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
 7. **Sync foundations**: `product_links`, `category_mappings`, `sync_logs`, manual `POST /sync`.

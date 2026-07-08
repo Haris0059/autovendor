@@ -238,6 +238,11 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="listing_type">Tip oglasa</FieldLabel>
                   <Select
+                    items={[
+                      { value: "sell", label: "Prodaja" },
+                      { value: "buy", label: "Kupovina" },
+                      { value: "rent", label: "Iznajmljivanje" },
+                    ]}
                     value={listingType}
                     onValueChange={(v) =>
                       setValue("listing_type", v as "sell" | "buy" | "rent")
@@ -256,6 +261,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="state">Stanje</FieldLabel>
                   <Select
+                    items={[
+                      { value: "new", label: "Novo" },
+                      { value: "used", label: "Korišteno" },
+                    ]}
                     value={listingState}
                     onValueChange={(v) =>
                       setValue("state", v as "new" | "used")
@@ -345,6 +354,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="top_category_id">Kategorija</FieldLabel>
                   <Select
+                    items={(topCategories.data ?? []).map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    }))}
                     value={topCategoryId ? String(topCategoryId) : ""}
                     onValueChange={(v) =>
                       setValue("top_category_id", Number(v))
@@ -366,6 +379,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="category_id">Podkategorija</FieldLabel>
                   <Select
+                    items={(subCategories.data ?? []).map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    }))}
                     value={categoryId ? String(categoryId) : ""}
                     onValueChange={(v) => setValue("category_id", Number(v))}
                     disabled={!topCategoryId}
@@ -389,6 +406,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                   <Field>
                     <FieldLabel htmlFor="brand_id">Marka</FieldLabel>
                     <Select
+                      items={(brands.data ?? []).map((b) => ({
+                        value: String(b.id),
+                        label: b.name,
+                      }))}
                       value={brandId ? String(brandId) : ""}
                       onValueChange={(v) => setValue("brand_id", Number(v))}
                     >
@@ -408,6 +429,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                   <Field>
                     <FieldLabel htmlFor="model_id">Model</FieldLabel>
                     <Select
+                      items={(models.data ?? []).map((m) => ({
+                        value: String(m.id),
+                        label: m.name,
+                      }))}
                       value={watch("model_id") ? String(watch("model_id")) : ""}
                       onValueChange={(v) => setValue("model_id", Number(v))}
                       disabled={!brandId}
@@ -477,7 +502,14 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field>
                   <FieldLabel htmlFor="country_id">Država</FieldLabel>
-                  <Select value="1" onValueChange={() => {}}>
+                  <Select
+                    items={(countries.data ?? []).map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    }))}
+                    value="1"
+                    onValueChange={() => {}}
+                  >
                     <SelectTrigger id="country_id">
                       <SelectValue />
                     </SelectTrigger>
@@ -493,6 +525,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="state_id">Entitet</FieldLabel>
                   <Select
+                    items={(states.data ?? []).map((s) => ({
+                      value: String(s.id),
+                      label: s.name,
+                    }))}
                     value={stateId ? String(stateId) : ""}
                     onValueChange={(v) => setValue("state_id", Number(v))}
                   >
@@ -511,6 +547,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="canton_id">Kanton</FieldLabel>
                   <Select
+                    items={(cantons.data ?? []).map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    }))}
                     value={cantonId ? String(cantonId) : ""}
                     onValueChange={(v) => setValue("canton_id", Number(v))}
                     disabled={!stateId || (cantons.data?.length ?? 0) === 0}
@@ -530,6 +570,10 @@ export function ListingForm({ listing, onSaved }: ListingFormProps) {
                 <Field>
                   <FieldLabel htmlFor="city_id">Grad</FieldLabel>
                   <Select
+                    items={(cities.data ?? []).map((c) => ({
+                      value: String(c.id),
+                      label: c.name,
+                    }))}
                     value={watch("city_id") ? String(watch("city_id")) : ""}
                     onValueChange={(v) => setValue("city_id", Number(v))}
                     disabled={!stateId}

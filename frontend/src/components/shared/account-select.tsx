@@ -29,6 +29,7 @@ export function AccountSelect({
 
   return (
     <Select
+      items={accounts.map((a) => ({ value: String(a.id), label: a.username }))}
       value={value}
       onValueChange={(v) => {
         const next = accounts.find((a) => String(a.id) === v) ?? null;

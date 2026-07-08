@@ -114,8 +114,9 @@ export function LinkProductDialog({
           <div className="grid grid-cols-2 gap-4">
             <Field data-invalid={!!errors.woo_store_id || undefined}>
               <FieldLabel>WooCommerce Shop</FieldLabel>
-              <Select 
-                value={form.watch("woo_store_id")} 
+              <Select
+                items={(stores ?? []).map((s) => ({ value: s.id.toString(), label: s.name }))}
+                value={form.watch("woo_store_id")}
                 onValueChange={(v) => form.setValue("woo_store_id", v ?? "")}
               >
                 <SelectTrigger>
@@ -132,8 +133,9 @@ export function LinkProductDialog({
             
             <Field data-invalid={!!errors.olx_account_id || undefined}>
               <FieldLabel>OLX Profil</FieldLabel>
-              <Select 
-                value={form.watch("olx_account_id")} 
+              <Select
+                items={(accounts ?? []).map((a) => ({ value: a.id.toString(), label: a.username }))}
+                value={form.watch("olx_account_id")}
                 onValueChange={(v) => form.setValue("olx_account_id", v ?? "")}
               >
                 <SelectTrigger>
@@ -155,8 +157,12 @@ export function LinkProductDialog({
                 <ShoppingCartIcon className="size-3" />
                 WooCommerce Proizvod
               </FieldLabel>
-              <Select 
-                value={form.watch("woo_product_id")} 
+              <Select
+                items={(wooProducts ?? []).map((p) => ({
+                  value: p.id.toString(),
+                  label: `${p.name} ${p.sku ? `(${p.sku})` : ""}`.trim(),
+                }))}
+                value={form.watch("woo_product_id")}
                 onValueChange={(v) => form.setValue("woo_product_id", v ?? "")}
                 disabled={!selectedStoreId || wooLoading}
               >
@@ -183,8 +189,12 @@ export function LinkProductDialog({
                 <LayoutGridIcon className="size-3" />
                 OLX Artikal
               </FieldLabel>
-              <Select 
-                value={form.watch("olx_listing_id")} 
+              <Select
+                items={(accountListings ?? []).map((l) => ({
+                  value: l.id.toString(),
+                  label: `${l.title} (ID: ${l.id})`,
+                }))}
+                value={form.watch("olx_listing_id")}
                 onValueChange={(v) => form.setValue("olx_listing_id", v ?? "")}
                 disabled={!selectedAccountId || listingsLoading}
               >

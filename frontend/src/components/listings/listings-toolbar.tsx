@@ -36,6 +36,7 @@ export function ListingsToolbar({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Select
+        items={accounts.map((a) => ({ value: String(a.id), label: a.username }))}
         value={activeAccountId ? String(activeAccountId) : ""}
         onValueChange={(v) => v && onAccountChange(Number(v))}
       >

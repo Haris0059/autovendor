@@ -51,7 +51,14 @@ export default function AnalyticsPage() {
         description="Pratite performanse vaših OLX profila i sinhronizacije."
       >
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "Svi profili")}>
+          <Select
+            items={[
+              { value: "Svi profili", label: "Svi profili" },
+              ...(accounts ?? []).map((a) => ({ value: a.id.toString(), label: a.username })),
+            ]}
+            value={selectedAccountId}
+            onValueChange={(v) => setSelectedAccountId(v ?? "Svi profili")}
+          >
             <SelectTrigger className="w-[180px] h-9">
               <UsersIcon className="mr-2 size-3 text-muted-foreground" />
               <SelectValue placeholder="Svi profili" />

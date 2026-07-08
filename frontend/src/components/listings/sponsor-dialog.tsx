@@ -127,7 +127,14 @@ export function SponsorDialog({
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
           <Field data-invalid={!!errors.type || undefined}>
             <FieldLabel>Tip sponzorstva</FieldLabel>
-            <Select value={type} onValueChange={(v) => form.setValue("type", (v as "1" | "2") ?? "1")}>
+            <Select
+              items={[
+                { value: "1", label: "Izdvojena u kategoriji" },
+                { value: "2", label: "Izdvojena (Globalno)" },
+              ]}
+              value={type}
+              onValueChange={(v) => form.setValue("type", (v as "1" | "2") ?? "1")}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -142,7 +149,14 @@ export function SponsorDialog({
           <div className="grid grid-cols-2 gap-4">
             <Field data-invalid={!!errors.days || undefined}>
               <FieldLabel>Trajanje (dana)</FieldLabel>
-              <Select value={days} onValueChange={(v) => form.setValue("days", v ?? "7")}>
+              <Select
+                items={[1, 3, 7, 15, 30].map((d) => ({
+                  value: d.toString(),
+                  label: `${d} ${d === 1 ? "dan" : "dana"}`,
+                }))}
+                value={days}
+                onValueChange={(v) => form.setValue("days", v ?? "7")}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -157,7 +171,17 @@ export function SponsorDialog({
             
             <Field data-invalid={!!errors.refresh_every || undefined}>
               <FieldLabel>Automatsko obnavljanje</FieldLabel>
-              <Select value={refresh_every} onValueChange={(v) => form.setValue("refresh_every", v ?? "0")}>
+              <Select
+                items={[
+                  { value: "0", label: "Bez obnavljanja" },
+                  { value: "1", label: "Svaki sat" },
+                  { value: "6", label: "Svakih 6 sati" },
+                  { value: "12", label: "Svakih 12 sati" },
+                  { value: "24", label: "Jednom dnevno" },
+                ]}
+                value={refresh_every}
+                onValueChange={(v) => form.setValue("refresh_every", v ?? "0")}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

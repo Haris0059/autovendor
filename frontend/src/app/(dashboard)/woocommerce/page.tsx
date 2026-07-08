@@ -127,7 +127,15 @@ export default function WooCommercePage() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Select value={perPage} onValueChange={(v) => v && setPerPage(v)}>
+          <Select
+            items={[
+              { value: "10", label: "10 / str" },
+              { value: "20", label: "20 / str" },
+              { value: "50", label: "50 / str" },
+            ]}
+            value={perPage}
+            onValueChange={(v) => v && setPerPage(v)}
+          >
             <SelectTrigger className="h-9 w-24">
               <SelectValue />
             </SelectTrigger>

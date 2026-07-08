@@ -93,7 +93,16 @@ export default function SyncHistoryPage() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? "Svi statusi")}>
+              <Select
+                items={[
+                  { value: "Svi statusi", label: "Svi statusi" },
+                  { value: "success", label: "Uspješno" },
+                  { value: "failed", label: "Greška" },
+                  { value: "pending", label: "Na čekanju" },
+                ]}
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v ?? "Svi statusi")}
+              >
                 <SelectTrigger className="w-[140px] h-9">
                   <FilterIcon className="mr-2 size-3 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
@@ -106,7 +115,14 @@ export default function SyncHistoryPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={storeFilter} onValueChange={(v) => setStoreFilter(v ?? "Svi shopovi")}>
+              <Select
+                items={[
+                  { value: "Svi shopovi", label: "Svi shopovi" },
+                  ...(stores ?? []).map((s) => ({ value: s.id.toString(), label: s.name })),
+                ]}
+                value={storeFilter}
+                onValueChange={(v) => setStoreFilter(v ?? "Svi shopovi")}
+              >
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Shop" />
                 </SelectTrigger>
@@ -118,7 +134,14 @@ export default function SyncHistoryPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={accountFilter} onValueChange={(v) => setAccountFilter(v ?? "Svi profili")}>
+              <Select
+                items={[
+                  { value: "Svi profili", label: "Svi profili" },
+                  ...(accounts ?? []).map((a) => ({ value: a.id.toString(), label: a.username })),
+                ]}
+                value={accountFilter}
+                onValueChange={(v) => setAccountFilter(v ?? "Svi profili")}
+              >
                 <SelectTrigger className="w-[160px] h-9">
                   <SelectValue placeholder="Profil" />
                 </SelectTrigger>

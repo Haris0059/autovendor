@@ -247,7 +247,11 @@ export default function CategoryMappingsPage() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="woo-cat">WooCommerce Kategorija</Label>
-              <Select value={wooCatId} onValueChange={(v) => setWooCatId(v ?? "")}>
+              <Select
+                items={(wooCategories ?? []).map((c) => ({ value: c.id.toString(), label: c.name }))}
+                value={wooCatId}
+                onValueChange={(v) => setWooCatId(v ?? "")}
+              >
                 <SelectTrigger id="woo-cat">
                   <SelectValue placeholder={wooLoading ? "Učitavanje..." : "Odaberi kategoriju"} />
                 </SelectTrigger>
@@ -267,7 +271,11 @@ export default function CategoryMappingsPage() {
 
             <div className="grid gap-2">
               <Label htmlFor="olx-cat">OLX Kategorija</Label>
-              <Select value={olxCatId} onValueChange={(v) => setOlxCatId(v ?? "")}>
+              <Select
+                items={(olxCategories ?? []).map((c) => ({ value: c.id.toString(), label: c.name }))}
+                value={olxCatId}
+                onValueChange={(v) => setOlxCatId(v ?? "")}
+              >
                 <SelectTrigger id="olx-cat">
                   <SelectValue placeholder={olxLoading ? "Učitavanje..." : "Odaberi kategoriju"} />
                 </SelectTrigger>

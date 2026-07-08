@@ -66,6 +66,11 @@ export default function ListingsPage() {
   const lastPage = listingsQuery.data?.last_page ?? 1
   const total = listingsQuery.data?.total ?? 0
 
+  // Account still resolving (accounts loading, or loaded but the default not
+  // applied yet) — show table skeletons instead of flashing the empty state.
+  const preparingAccount =
+    accountsQuery.isLoading || (accounts.length > 0 && !activeAccount)
+
   const handleAccountChange = (id: number) => {
     const next = accounts.find((a) => a.id === id)
     if (next) {
@@ -110,9 +115,10 @@ export default function ListingsPage() {
 
       <ListingsTable
         listings={filteredListings}
-        isLoading={listingsQuery.isLoading}
+        isLoading={preparingAccount || listingsQuery.isLoading}
+        isFetching={listingsQuery.isFetching}
         isError={listingsQuery.isError}
-        hasAccount={!!activeAccount}
+        hasAccount={preparingAccount || !!activeAccount}
         total={total}
         selectedIds={selectedIds}
         onSelectedChange={setSelectedIds}

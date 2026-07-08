@@ -49,6 +49,9 @@ export function useListings(filters: ListingFilters) {
       );
     },
     enabled: !!filters.account_id,
+    // Always revalidate: listings change on OLX itself, and the table shows a
+    // fetching indicator, so every tab visit refreshes in the background.
+    staleTime: 0,
   });
 }
 

@@ -51,6 +51,7 @@ import { useState } from "react";
 interface ListingsTableProps {
   listings: OlxListing[];
   isLoading: boolean;
+  isFetching?: boolean;
   isError: boolean;
   hasAccount: boolean;
   total: number;
@@ -101,6 +102,7 @@ const ROW_ACTIONS: {
 export function ListingsTable({
   listings,
   isLoading,
+  isFetching = false,
   isError,
   hasAccount,
   total,
@@ -330,6 +332,8 @@ export function ListingsTable({
             columns={columns}
             data={hasAccount ? listings : []}
             isLoading={hasAccount && isLoading}
+            isFetching={hasAccount && isFetching}
+            loadingRowCount={8}
             isError={hasAccount && isError}
             emptyMessage={
               hasAccount

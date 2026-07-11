@@ -7,7 +7,7 @@ import {
   useWooStoreProducts,
   useWooStoreCategories,
   useWooStoreAttributes,
-  useTestWooConnection,
+  useTestWooStoreConnection,
 } from "@/hooks/use-woo-stores"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -57,14 +57,14 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
   const { data: products, isLoading: productsLoading } = useWooStoreProducts(storeId)
   const { data: categories, isLoading: categoriesLoading } = useWooStoreCategories(storeId)
   const { data: attributes, isLoading: attributesLoading } = useWooStoreAttributes(storeId)
-  const testConnection = useTestWooConnection()
+  const testConnection = useTestWooStoreConnection()
 
   const [activeTab, setActiveTab] = useState("products")
 
   const handleTest = () => {
     if (!store) return
     testConnection.mutate(
-      { store_url: store.store_url, api_key: "********" }, // actual key is handled by backend, placeholder for mock
+      storeId,
       {
         onSuccess: (data) => {
           if (data.ok) {

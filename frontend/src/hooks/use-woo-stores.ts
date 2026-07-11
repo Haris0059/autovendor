@@ -172,3 +172,17 @@ export function useTestWooConnection() {
     },
   });
 }
+
+export function useTestWooStoreConnection() {
+  return useMutation({
+    mutationFn: async (storeId: number) => {
+      if (USE_MOCKS) {
+        await mockDelay(null, 600);
+        return { ok: true, products_count: 24 };
+      }
+      return api.post<{ ok: boolean; products_count: number }>(
+        `/woo/stores/${storeId}/test`
+      );
+    },
+  });
+}

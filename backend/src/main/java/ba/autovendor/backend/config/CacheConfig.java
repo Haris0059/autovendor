@@ -35,6 +35,9 @@ public class CacheConfig {
                 .withCacheConfiguration("olx-categories", defaults.entryTtl(Duration.ofHours(24)))
                 .withCacheConfiguration("olx-locations", defaults.entryTtl(Duration.ofDays(7)))
                 .withCacheConfiguration("olx-listings-all", defaults.entryTtl(Duration.ofMinutes(5)))
+                .withCacheConfiguration("woo-products", defaults.entryTtl(Duration.ofMinutes(5)))
+                .withCacheConfiguration("woo-categories", defaults.entryTtl(Duration.ofMinutes(15)))
+                .withCacheConfiguration("woo-attributes", defaults.entryTtl(Duration.ofMinutes(15)))
                 .build();
     }
 }

@@ -44,3 +44,6 @@ app:
     base-url: https://api.olx.ba
     device-name: AutoVendor
     token-ttl-days: 30
+  woo:
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 30

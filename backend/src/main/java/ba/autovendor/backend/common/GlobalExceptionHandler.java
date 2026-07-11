@@ -63,6 +63,19 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(ex.getMessage()));
     }
 
+    @ExceptionHandler(InvalidWooApiKeyException.class)
+    public ResponseEntity<ApiError> handleInvalidWooApiKey(InvalidWooApiKeyException ex) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError(ex.getMessage()));
+    }
+
+    @ExceptionHandler(WooPluginException.class)
+    public ResponseEntity<ApiError> handleWooPlugin(WooPluginException ex) {
+        boolean clientError = ex.getUpstreamStatus() >= 400 && ex.getUpstreamStatus() < 500;
+        return ResponseEntity.status(clientError ? HttpStatus.BAD_REQUEST : HttpStatus.BAD_GATEWAY)
+                .body(new ApiError(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()

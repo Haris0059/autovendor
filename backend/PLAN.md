@@ -8,9 +8,9 @@ The backend is written in **Java + Spring**. This document is the implementation
 
 The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user multi-account support, scheduled + webhook-triggered syncs, encrypted credential storage, and a REST API that matches the contract the frontend already calls.
 
-## Status (updated 2026-07-08)
+## Status (updated 2026-07-11)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (51 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (77 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
@@ -28,7 +28,17 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
 
    **Frontend UX conventions from this slice:** the shared `DataTable` shows skeletons when fetching with no rows on screen and a dim + "Učitavanje…" overlay when refetching over existing rows — new tables should pass `isFetching` from their query; the listings list query uses `staleTime: 0` (overriding the global 60 s) so every tab visit revalidates visibly (`10a7cd0`). Selects built on Base UI need the `items` prop or the trigger renders the raw value (`eed58be`).
 
-**Next: step 6** — WooCommerce: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
+6. ✅ **WooCommerce** — `woo_stores` (V3, AES-GCM-encrypted `api_key`, UNIQUE `(user_id, store_url)`), `WooPluginClient` (**AutoVendor plugin variant only** — decision; header auth only, never the `api_key` query param, since that lands in WP access logs), store CRUD, connect tests, catalog proxy. Verified live against alpus.ba (13 products) + frontend walkthrough with `USE_MOCKS=false`.
+   - Endpoints: `/woo/stores` CRUD; `POST /woo/stores/test` (body `{store_url, api_key}`) **and** `POST /woo/stores/{id}/test` (stored key — new, path-scoped; frontend detail page switched to it and the masked-key hack was removed); `GET /woo/stores/{id}/products|categories|attributes` (bare arrays per frontend contract).
+   - Connect test = paging the plugin's lightweight `/catalog-hashes` (per_page 200, cap 50 pages) summing `count` → `{ok, products_count}`; also runs pre-persist on create and on url/key change in update (name-only updates never call the plugin). Store URLs normalized (default https, strip trailing `/`) before dedupe/persist.
+   - Products proxy aggregates plugin `/catalog` pages (per_page 100, cap 100 pages) into frontend `WooProduct` shape: `stock_qty`→`stock_quantity`, `currency` hardcoded `"KM"` (plugin exposes none), product-embedded categories get `parent=0`; `/categories` flattens the plugin's nested tree (parent = enclosing node, no `count` upstream → null); attributes get `has_archives=false`, `variation=false`, `options=null` (frontend falls back to `terms`).
+   - Redis caches `woo-products` (5 min) / `woo-categories` / `woo-attributes` (15 min), keyed by store id, evicted on store update/delete. ⚠️ Ownership-vs-cache trap: `@Cacheable` sits on a separate `WooCatalogFetcher` while `WooCatalogService` runs `findByIdAndUserId` on **every** call — a cache hit can never skip the ownership check (pinned by test).
+   - Error mapping: plugin 401/403 → `InvalidWooApiKeyException` → 400 "Invalid WooCommerce API key"; WP `rest_no_route` 404 (plugin not installed) → 400 "AutoVendor plugin not found on this store"; other upstream 4xx → 400 with WP's `message`; 5xx/connectivity → 502 via `WooPluginException`.
+   - **Boot 4 gotcha:** `ClientHttpRequestFactorySettings` was renamed — timeouts are now `ClientHttpRequestFactoryBuilder.detect().build(HttpClientSettings.defaults().withTimeouts(connect, read))` (`org.springframework.boot.http.client.HttpClientSettings`).
+   - **WP plugin gotcha:** the settings page (API key) hangs off the WooCommerce admin menu (`WooCommerce → AutoVendor`) and silently disappears if WooCommerce is inactive; key lives in the `autovendor_api_key` option.
+   - Sync-engine note (step 7+): the plugin swaps attribute semantics — `name` holds the label, `slug` the raw name.
+
+**Next: step 7** — Sync foundations: `product_links`, `category_mappings`, `sync_logs`, manual `POST /sync`.
 
 ---
 
@@ -82,9 +92,9 @@ backend/
     │   ├── sponsor/         SponsorController, DiscountController
     │   └── limit/           LimitController
     ├── woo/
-    │   ├── store/           WooStore entity, StoreController, StoreService
-    │   ├── client/          WooPluginClient (RestClient, X-AutoVendor-API-Key)
-    │   └── product/         ProductController (read-through to plugin)
+    │   ├── store/           ✅ WooStore entity, StoreController, StoreService, WooStoreRepository/Mapper, dto/
+    │   ├── client/          ✅ WooPluginClient (RestClient, X-AutoVendor-API-Key), dto/
+    │   └── product/         ✅ WooCatalogController, WooCatalogService (ownership) + WooCatalogFetcher (Redis-cached), WooCatalogMapper, dto/
     ├── sync/
     │   ├── ProductLink entity, CategoryMapping entity, SyncLog entity
     │   ├── SyncController, MappingController, LinkController
@@ -107,7 +117,7 @@ Conventions in the code so far: DTOs are Java records; mappers are static utilit
 
 - ✅ **users** (`V1__create_users.sql`): `id`, `email UNIQUE`, `password` (BCrypt hash — column is named `password`, not `password_hash`), `name`, `created_at`
 - ✅ **olx_accounts** (`V2__create_olx_accounts.sql`): `id`, `user_id FK`, `username`, `encrypted_password BYTEA`, `olx_user_id`, `default_city_id`, `token_ciphertext BYTEA`, `token_expires_at`, `created_at`, **UNIQUE `(user_id, username)`**
-- **woo_stores**: `id`, `user_id FK`, `name`, `store_url`, `encrypted_api_key BYTEA`, `created_at`
+- ✅ **woo_stores** (`V3__create_woo_stores.sql`): `id`, `user_id FK`, `name`, `store_url`, `encrypted_api_key BYTEA`, `created_at`, **UNIQUE `(user_id, store_url)`**
 - **category_mappings**: `id`, `user_id FK`, `woo_category_id`, `woo_category_name`, `olx_category_id`, `olx_category_name`, unique `(user_id, woo_category_id)`
 - **product_links**: `id`, `olx_account_id FK`, `woo_store_id FK`, `olx_listing_id`, `woo_product_id`, `sync_direction` (enum: `woo_to_olx`), `woo_hash`, `last_synced_at`, unique `(woo_store_id, woo_product_id)`
 - **sync_logs**: `id`, `product_link_id FK NULL`, `action`, `status` (success/failed/skipped/pending), `message`, `created_at`, index on `(product_link_id, created_at DESC)`
@@ -137,7 +147,7 @@ The frontend currently passes `account_id` as a query/body field. The backend wi
 - Ownership checks: the accounts CRUD (done) uses **repository-scoped queries** (`findByIdAndUserId`) and returns **404** for other users' resources — this hides existence and needs no aspect. Keep the same pattern for nested resources: resolve `{accountId}` through `findByIdAndUserId` at the top of the service method (404 if not owned) instead of a separate `@AccountOwned` aspect, unless duplication grows.
 - WooCommerce store scoping mirrors this: `/woo/stores/{storeId}/...`.
 
-> **Frontend follow-up**: ✅ `use-listings` switched to path-param scoping (mutations resolve the active account internally via `useActiveAccount`, persisted in localStorage, with first-account fallback). Still pending when their slices land: `use-listing-limits`, `use-listing-stats`, `use-sponsored`, `use-woo-stores`'s nested resources.
+> **Frontend follow-up**: ✅ `use-listings` switched to path-param scoping (mutations resolve the active account internally via `useActiveAccount`, persisted in localStorage, with first-account fallback). Still pending when their slices land: `use-listing-limits`, `use-listing-stats`, `use-sponsored`. ✅ `use-woo-stores` was already path-scoped; its detail-page test now uses `POST /woo/stores/{id}/test` (new `useTestWooStoreConnection`).
 
 ---
 
@@ -198,6 +208,7 @@ Grouped to mirror frontend hooks. All under `Authorization: Bearer <jwt>` unless
 - `PUT    /woo/stores/{storeId}`
 - `DELETE /woo/stores/{storeId}`
 - `POST   /woo/stores/test` — `{store_url, api_key}` → `{ok, products_count}`
+- `POST   /woo/stores/{storeId}/test` — same response, uses the stored key (added for the detail page)
 - `GET    /woo/stores/{storeId}/products`
 - `GET    /woo/stores/{storeId}/categories`
 - `GET    /woo/stores/{storeId}/attributes`
@@ -277,7 +288,7 @@ Reference for exact request/response shapes: the frontend hooks under `frontend/
 - `byte[] encrypt(String plaintext)` → returns IV(12) + ciphertext + tag, AES-256-GCM.
 - `String decrypt(byte[])`.
 - Key loaded once from `app.crypto.key` (base64-encoded 32 bytes; dev default in `application.yml`, override with `APP_CRYPTO_KEY` env in prod — **generate a fresh prod key**, the dev key is committed).
-- Used by: `OlxAccount.encrypted_password`, `OlxAccount.token_ciphertext` ✅; `WooStore.encrypted_api_key` (todo).
+- Used by: `OlxAccount.encrypted_password`, `OlxAccount.token_ciphertext` ✅; `WooStore.encrypted_api_key` ✅.
 - `EncryptedStringConverter` — JPA `AttributeConverter<String, byte[]>`, a Spring `@Component` (Boot registers `SpringBeanContainer`, so Hibernate injects it); entities expose `String`, columns store `BYTEA`.
 - ⚠️ Changing the key makes existing rows undecryptable — there is no key-rotation support; if rotation is ever needed, add a re-encrypt migration path first.
 
@@ -292,7 +303,7 @@ Reference for exact request/response shapes: the frontend hooks under `frontend/
 - ✅ `EntityNotFoundException` → 404 `{detail}`
 - ✅ `IllegalArgumentException` → 400 `{detail}` (duplicate email / duplicate OLX account, etc.)
 - ✅ `InvalidOlxCredentialsException` → 400 `{detail: "Invalid OLX credentials"}`
-- ✅ `OlxApiException` → 502 `{detail}`; `WooPluginException` → 502 (todo with the Woo slice)
+- ✅ `OlxApiException` → 502 `{detail}` (or 400 when upstream 4xx); `WooPluginException` → same mapping ✅; `InvalidWooApiKeyException` → 400 ✅
 - ✅ Everything else → 500 with sanitized message.
 - ✅ Unauthenticated requests (no/bad JWT) → 401 `{detail: "Not authenticated"}` from the security entry point, not the advice.
 
@@ -332,7 +343,7 @@ Response shape `{detail: string}` matches what the frontend's `api-client.ts` al
 3. ✅ **OLX accounts**: entity, encryption, CRUD, OLX login on create + credential update. (commit `a968cff`)
 4. ✅ **OLX proxy basics**: `OlxApiClient` + `OlxTokenManager`, categories + locations with Redis caching.
 5. ✅ **OLX listings**: path-scoped CRUD + status transitions, image upload, refresh; frontend hooks refactored to path scoping.
-6. **WooCommerce**: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
+6. ✅ **WooCommerce**: store CRUD, `WooPluginClient`, connect-test endpoints, products/categories/attributes proxy; verified live against alpus.ba.
 7. **Sync foundations**: `product_links`, `category_mappings`, `sync_logs`, manual `POST /sync`.
 8. **Sync engine**: full sync flow, hash comparison, image pipeline.
 9. **Webhook receiver** + webhook-triggered sync path.

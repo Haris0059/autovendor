@@ -8,21 +8,25 @@ The backend is written in **Java + Spring**. This document is the implementation
 
 The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user multi-account support, scheduled + webhook-triggered syncs, encrypted credential storage, and a REST API that matches the contract the frontend already calls.
 
-## Status (updated 2026-07-07)
+## Status (updated 2026-07-08)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (22 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (51 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
 3. ✅ **OLX accounts** (commit `a968cff`) — `olx_accounts` (V2), AES-GCM `EncryptionService` + `EncryptedStringConverter`, `/olx/accounts` CRUD scoped per user, `OlxApiClient.login` called on create and on credential update; verified once against the real OLX API.
-4. ✅ **OLX proxy basics** — `OlxApiClient` catalog methods + `authGet` (throws `OlxAuthException` on 401/403), `OlxTokenManager` (5-min refresh skew, one-retry-on-rejection via `withAccountToken`), `/olx/categories*` + `/locations/*` proxies with Redis caching (`olx-categories` 24h, `olx-locations` 7d). Key findings: OLX catalog/location endpoints are **public** (no Bearer needed); responses wrapped in `{"data": ...}`; `/cities` is a state→canton→city tree (cantons exist for RS/Brčko too, as regions); attribute `options` is `List<String>`; cached values must be `ArrayList`s (the Redis JSON serializer can't reconstruct JDK immutable lists).
-5. ✅ **OLX listings** — **path-scoped** `/olx/accounts/{accountId}/listings...` (CRUD, publish/finish/hide/unhide, refresh, multipart image upload/delete/main) + user-wide `GET /olx/listings/all` (all accounts × statuses, page cap 10/status, Redis-cached 5 min in `olx-listings-all`, evicted on mutations). Frontend `use-listings.ts` refactored to the path-scoped routes (mutations resolve the account internally; active account now persisted in localStorage). Verified live with a draft lifecycle on the real account. **OLX gotchas found (July 2026):**
+4. ✅ **OLX proxy basics** (commit `5851c04`) — `OlxApiClient` catalog methods + `authGet` (throws `OlxAuthException` on 401/403), `OlxTokenManager` (5-min refresh skew, one-retry-on-rejection via `withAccountToken`), `/olx/categories*` + `/locations/*` proxies with Redis caching (`olx-categories` 24h, `olx-locations` 7d). Key findings: OLX catalog/location endpoints are **public** (no Bearer needed); responses wrapped in `{"data": ...}`; `/cities` is a state→canton→city tree (cantons exist for RS/Brčko too, as regions); attribute `options` is `List<String>`; cached values must be `ArrayList`s (the Redis JSON serializer can't reconstruct JDK immutable lists).
+5. ✅ **OLX listings** (commits `bf9e915` backend, `54bf9f1` frontend; follow-ups `f5ce642`, `10a7cd0`) — **path-scoped** `/olx/accounts/{accountId}/listings...` (CRUD, publish/finish/hide/unhide, refresh, multipart image upload/delete/main) + user-wide `GET /olx/listings/all` (all accounts × statuses, page cap 10/status, Redis-cached 5 min in `olx-listings-all`, evicted on mutations). Frontend `use-listings.ts` refactored to the path-scoped routes (mutations resolve the account internally; active account now persisted in localStorage). Verified live with a draft lifecycle on the real account. **OLX gotchas found (July 2026):**
    - ⚠️ `PUT /listings/{id}` on a **draft publishes it** (status flips to active) — there is no way back to draft.
    - There is **no endpoint to list drafts** (`/inactive` does NOT contain them; `/listings/draft(s)` etc. 404) — drafts are reachable only by id after creation. Dashboard stats therefore can't count drafts.
    - `/users/{id}/listings/hidden` returns items whose `status` field still says `active` → backend forces `status=hidden` on that route.
    - `city_id` is only persisted when `country_id` is sent along (BiH = **49**, not 1 — frontend form default fixed).
    - List envelope is `{data, meta:{total,last_page,current_page,per_page}}` (docs claimed top-level fields); `per_page` IS honored despite being undocumented.
    - Listing responses carry image **URLs only** (no image ids); ids exist only in the image-upload response — so existing remote images can't be deleted/re-mained after a refetch (frontend shows "not supported yet" for that).
+   - Some list endpoints (e.g. `/finished`) return `images: null` with only the single `image` thumbnail set → mapper falls back to it (`f5ce642`).
+   - List items have no `created_at` — only `date` (the refresh/bump timestamp), so "Kreirano" in the table shows the bump date; the accurate `created_at` exists only on single-listing GETs.
+
+   **Frontend UX conventions from this slice:** the shared `DataTable` shows skeletons when fetching with no rows on screen and a dim + "Učitavanje…" overlay when refetching over existing rows — new tables should pass `isFetching` from their query; the listings list query uses `staleTime: 0` (overriding the global 60 s) so every tab visit revalidates visibly (`10a7cd0`). Selects built on Base UI need the `items` prop or the trigger renders the raw value (`eed58be`).
 
 **Next: step 6** — WooCommerce: store CRUD, `WooPluginClient`, connect-test endpoint, products/categories/attributes proxy.
 

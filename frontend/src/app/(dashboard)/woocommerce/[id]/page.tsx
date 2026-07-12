@@ -10,6 +10,7 @@ import {
   useTestWooStoreConnection,
 } from "@/hooks/use-woo-stores"
 import { LinkProductDialog } from "@/components/sync/link-product-dialog"
+import { useSyncHistory } from "@/hooks/use-sync"
 import type { WooProduct } from "@/types/woocommerce"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +60,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
   const { data: products, isLoading: productsLoading } = useWooStoreProducts(storeId)
   const { data: categories, isLoading: categoriesLoading } = useWooStoreCategories(storeId)
   const { data: attributes, isLoading: attributesLoading } = useWooStoreAttributes(storeId)
+  const { data: storeHistory, isLoading: historyLoading } = useSyncHistory({ store_id: storeId, per_page: 20 })
   const testConnection = useTestWooStoreConnection()
 
   const [activeTab, setActiveTab] = useState("products")
@@ -398,16 +400,60 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
         <TabsContent value="webhooks" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Webhook Logovi</CardTitle>
+              <CardTitle>Aktivnost sinhronizacije</CardTitle>
               <CardDescription>
-                Pregled zadnjih aktivnosti zaprimljenih putem webkooka.
+                Zadnje sinhronizacije za ovaj shop (webhook, automatske i ručne).
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex h-32 flex-col items-center justify-center text-center">
-                <HistoryIcon className="mb-2 size-8 text-muted-foreground opacity-20" />
-                <p className="text-sm text-muted-foreground">Još nema zaprimljenih webhook događaja.</p>
-              </div>
+              {historyLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !storeHistory?.data || storeHistory.data.length === 0 ? (
+                <div className="flex h-32 flex-col items-center justify-center text-center">
+                  <HistoryIcon className="mb-2 size-8 text-muted-foreground opacity-20" />
+                  <p className="text-sm text-muted-foreground">Još nema aktivnosti za ovaj shop.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Vrijeme</TableHead>
+                      <TableHead>Akcija</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Poruka</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {storeHistory.data.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {formatDate(log.created_at)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {log.action === "create" ? "Kreiranje" :
+                           log.action === "update" ? "Ažuriranje" :
+                           log.action === "hide" ? "Sakrivanje" : log.action}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={log.status === "failed" ? "destructive" : "outline"}
+                            className={log.status === "success" ? "text-green-600 border-green-200 bg-green-50" : ""}
+                          >
+                            {log.status === "success" ? "Uspješno" :
+                             log.status === "failed" ? "Greška" :
+                             log.status === "skipped" ? "Preskočeno" : "U toku"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-md truncate text-muted-foreground">
+                          {log.message}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

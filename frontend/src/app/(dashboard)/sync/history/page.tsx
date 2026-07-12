@@ -32,6 +32,7 @@ import {
   Loader2Icon,
   CheckCircle2Icon,
   AlertCircleIcon,
+  MinusCircleIcon,
   FilterIcon,
   ArrowLeftIcon,
 } from "lucide-react"
@@ -98,6 +99,7 @@ export default function SyncHistoryPage() {
                   { value: "Svi statusi", label: "Svi statusi" },
                   { value: "success", label: "Uspješno" },
                   { value: "failed", label: "Greška" },
+                  { value: "skipped", label: "Preskočeno" },
                   { value: "pending", label: "Na čekanju" },
                 ]}
                 value={statusFilter}
@@ -111,6 +113,7 @@ export default function SyncHistoryPage() {
                   <SelectItem value="Svi statusi">Svi statusi</SelectItem>
                   <SelectItem value="success">Uspješno</SelectItem>
                   <SelectItem value="failed">Greška</SelectItem>
+                  <SelectItem value="skipped">Preskočeno</SelectItem>
                   <SelectItem value="pending">Na čekanju</SelectItem>
                 </SelectContent>
               </Select>
@@ -196,8 +199,9 @@ export default function SyncHistoryPage() {
                     </TableCell>
                     <TableCell>
                       <span className="font-medium capitalize">
-                        {log.action === "create" ? "Kreiranje" : 
-                         log.action === "update" ? "Ažuriranje" : 
+                        {log.action === "create" ? "Kreiranje" :
+                         log.action === "update" ? "Ažuriranje" :
+                         log.action === "hide" ? "Sakrivanje" :
                          log.action === "stock" ? "Zalihe" : log.action}
                       </span>
                     </TableCell>
@@ -207,12 +211,15 @@ export default function SyncHistoryPage() {
                           <CheckCircle2Icon className="size-4 text-green-500" />
                         ) : log.status === "failed" ? (
                           <AlertCircleIcon className="size-4 text-destructive" />
+                        ) : log.status === "skipped" ? (
+                          <MinusCircleIcon className="size-4 text-muted-foreground" />
                         ) : (
                           <Loader2Icon className="size-4 animate-spin text-blue-500" />
                         )}
                         <span className={log.status === "failed" ? "text-destructive font-medium" : ""}>
-                          {log.status === "success" ? "Uspješno" : 
-                           log.status === "failed" ? "Greška" : "U toku"}
+                          {log.status === "success" ? "Uspješno" :
+                           log.status === "failed" ? "Greška" :
+                           log.status === "skipped" ? "Preskočeno" : "U toku"}
                         </span>
                       </div>
                     </TableCell>

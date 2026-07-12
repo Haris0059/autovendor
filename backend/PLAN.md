@@ -8,9 +8,9 @@ The backend is written in **Java + Spring**. This document is the implementation
 
 The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user multi-account support, scheduled + webhook-triggered syncs, encrypted credential storage, and a REST API that matches the contract the frontend already calls.
 
-## Status (updated 2026-07-11)
+## Status (updated 2026-07-12)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (77 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (110 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
@@ -38,7 +38,18 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
    - **WP plugin gotcha:** the settings page (API key) hangs off the WooCommerce admin menu (`WooCommerce → AutoVendor`) and silently disappears if WooCommerce is inactive; key lives in the `autovendor_api_key` option.
    - Sync-engine note (step 7+): the plugin swaps attribute semantics — `name` holds the label, `slug` the raw name.
 
-**Next: step 7** — Sync foundations: `product_links`, `category_mappings`, `sync_logs`, manual `POST /sync`.
+7. ✅ **Sync foundations** — `product_links` / `category_mappings` / `sync_logs` (V4), `/sync/links` + `/sync/mappings` CRUD, manual `POST /sync` (full per-product Woo→OLX sync), `GET /sync/history` (Specification filters: status/account/store + pagination). Verified live end-to-end: alpus.ba product → mapping → link (null listing id) → create draft → images → publish → re-sync took the update path → cleanup. Frontend wired: "Poveži" on the store detail page opens a keyed `LinkProductDialog` with an optional listing id ("Novi artikal" sentinel → `null`).
+   - **Transaction split**: no `@Transactional` across HTTP calls; `SyncEngine` never throws (returns `SyncOutcome`), the log row is persisted after; `POST /sync` returns **200 with the log even for failed/skipped** outcomes. `olx_listing_id` is saved immediately after create, *before* images/publish, so a partial failure retries down the update path (and the PUT-publishes-a-draft gotcha completes the publish).
+   - `sync_logs` denormalizes `user_id`/`olx_account_id`/`woo_store_id` (filters need no JOIN); `product_link_id` is `ON DELETE SET NULL` — history survives link deletion (observed live; the frontend hides retry on such rows).
+   - Enums `SyncDirection`/`SyncStatus` use deliberate **lowercase constants** so DB/`@Enumerated(STRING)`/JSON/query params align with zero Jackson config. All 3 directions are stored; non-`woo_to_olx` syncs log `skipped`.
+   - **OLX gotchas found (July 2026):**
+     - ⚠️ Create-listing **requires the `attributes` field to be present** (even `[]`) once `category_id` is sent — otherwise 422 `kategorija zahtjeva prisutno polje attributes`, including for categories with no required attributes. Engine always sends `attributes: []`; real attribute mapping is step 8.
+     - ✅ **`image_url` upload format pinned**: JSON body `{"image_url": "<absolute url>"}` to `POST /listings/{id}/image-upload` works (OLX downloads the image itself; Woo-hosted URLs fine, first upload set as main via the existing main-image endpoint). No multipart fallback needed — `uploadImages` (multipart) remains for the frontend proxy only.
+     - OLX validation errors arrive **nested**: `{"error": {"message", "errors": {field: msg}}}` — `OlxApiClient.olxError` unwraps that envelope and appends field errors so sync logs show the real reason (pinned by `OlxApiClientErrorTest`).
+     - HTML descriptions render correctly on the public listing page (SSR escapes them in the page source, but the UI renders the markup) — descriptions are sent as-is, no tag stripping.
+   - Payload whitelist (`SyncEngine.buildPayload`): title (truncated to 65), short_description (tags stripped), description (HTML as-is), price (fallback `regular_price`), `country_id` 49 + account's `default_city_id`, category via mapping (first Woo category; unmapped/no-category → `skipped` log naming the category), `sku_number`, `available` from stock_status, `listing_type` "sell", `state` "new", `attributes: []`.
+
+**Next: step 8** — Scheduled bulk sync + webhooks: reuse `SyncEngine.sync(link, account, product)` per link, hash-gate on `woo_hash` vs plugin `/catalog-hashes`, attribute mapping (remember: plugin swaps `name`/`slug` semantics), missing-`default_city_id` pre-check, `@Scheduled` jobs + WP webhook receiver.
 
 ---
 

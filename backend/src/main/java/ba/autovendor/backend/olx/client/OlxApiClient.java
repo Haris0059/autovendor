@@ -11,8 +11,11 @@ import ba.autovendor.backend.olx.client.dto.OlxListingDto;
 import ba.autovendor.backend.olx.client.dto.OlxListingPageDto;
 import ba.autovendor.backend.olx.client.dto.OlxNamedDto;
 import ba.autovendor.backend.olx.client.dto.OlxStateDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -29,6 +32,8 @@ import java.util.function.Supplier;
 
 @Component
 public class OlxApiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(OlxApiClient.class);
 
     private static final ParameterizedTypeReference<DataEnvelope<OlxCategoryDto>> CATEGORIES =
             new ParameterizedTypeReference<>() {
@@ -195,9 +200,14 @@ public class OlxApiClient {
     }
 
     public List<OlxImageDto> uploadImages(String token, long listingId, List<MultipartFile> images) {
+        return uploadImageResources(token, listingId,
+                images.stream().map(MultipartFile::getResource).map(r -> (Resource) r).toList());
+    }
+
+    public List<OlxImageDto> uploadImageResources(String token, long listingId, List<Resource> images) {
         MultipartBodyBuilder body = new MultipartBodyBuilder();
-        for (MultipartFile image : images) {
-            body.part("images[]", image.getResource());
+        for (Resource image : images) {
+            body.part("images[]", image);
         }
         JsonNode node = exchange(() -> restClient.post()
                 .uri("/listings/" + listingId + "/image-upload")
@@ -206,6 +216,21 @@ public class OlxApiClient {
                 .body(body.build())
                 .retrieve()
                 .body(JsonNode.class));
+        return parseImages(node);
+    }
+
+    /** Server-side upload of a remote image; OLX fetches the URL itself (documented `image_url` param). */
+    public List<OlxImageDto> uploadImageByUrl(String token, long listingId, String imageUrl) {
+        JsonNode node = exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/image-upload")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of("image_url", imageUrl))
+                .retrieve()
+                .body(JsonNode.class));
+        return parseImages(node);
+    }
+
+    private List<OlxImageDto> parseImages(JsonNode node) {
         JsonNode data = node != null && node.has("data") ? node.get("data") : node;
         return objectMapper.convertValue(data,
                 objectMapper.getTypeFactory().constructCollectionType(List.class, OlxImageDto.class));
@@ -274,11 +299,20 @@ public class OlxApiClient {
     private OlxApiException olxError(RestClientResponseException e) {
         int status = e.getStatusCode().value();
         String detail = "OLX request failed with status " + status;
+        log.warn("OLX error response ({}): {}", status, e.getResponseBodyAsString());
         try {
             JsonNode body = objectMapper.readTree(e.getResponseBodyAsString());
+            // Validation failures arrive nested: {"error": {"message": ..., "errors": {...}}}
+            if (body.get("error") != null && body.get("error").isObject()) {
+                body = body.get("error");
+            }
             JsonNode message = body.has("message") ? body.get("message") : body.get("error");
             if (message != null && message.isString() && !message.asString().isBlank()) {
                 detail = message.asString();
+            }
+            JsonNode errors = body.get("errors");
+            if (errors != null && !errors.isNull() && !errors.isEmpty()) {
+                detail = detail + ": " + errors;
             }
         } catch (Exception ignored) {
             // Non-JSON error body — keep the generic message.

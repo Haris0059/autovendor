@@ -6,6 +6,7 @@ import ba.autovendor.backend.woo.client.dto.WooCatalogPageDto;
 import ba.autovendor.backend.woo.client.dto.WooHashPageDto;
 import ba.autovendor.backend.woo.client.dto.WooPluginAttributeDto;
 import ba.autovendor.backend.woo.client.dto.WooPluginCategoryDto;
+import ba.autovendor.backend.woo.client.dto.WooPluginProductDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
 import org.springframework.boot.http.client.HttpClientSettings;
@@ -87,6 +88,14 @@ public class WooPluginClient {
                 .header(API_KEY_HEADER, apiKey)
                 .retrieve()
                 .body(WooHashPageDto.class));
+    }
+
+    public WooPluginProductDto getProduct(String storeUrl, String apiKey, long productId) {
+        return exchange(() -> restClient.get()
+                .uri(storeUrl + API_BASE_PATH + "/product/" + productId)
+                .header(API_KEY_HEADER, apiKey)
+                .retrieve()
+                .body(WooPluginProductDto.class));
     }
 
     public List<WooPluginCategoryDto> getCategories(String storeUrl, String apiKey) {

@@ -10,7 +10,7 @@ The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user m
 
 ## Status (updated 2026-07-12)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (110 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (134 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
@@ -49,7 +49,18 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
      - HTML descriptions render correctly on the public listing page (SSR escapes them in the page source, but the UI renders the markup) — descriptions are sent as-is, no tag stripping.
    - Payload whitelist (`SyncEngine.buildPayload`): title (truncated to 65), short_description (tags stripped), description (HTML as-is), price (fallback `regular_price`), `country_id` 49 + account's `default_city_id`, category via mapping (first Woo category; unmapped/no-category → `skipped` log naming the category), `sku_number`, `available` from stock_status, `listing_type` "sell", `state` "new", `attributes: []`.
 
-**Next: step 8** — Scheduled bulk sync + webhooks: reuse `SyncEngine.sync(link, account, product)` per link, hash-gate on `woo_hash` vs plugin `/catalog-hashes`, attribute mapping (remember: plugin swaps `name`/`slug` semantics), missing-`default_city_id` pre-check, `@Scheduled` jobs + WP webhook receiver.
+8. ✅ **Scheduled bulk sync + webhook receiver** — automation on top of the step-7 engine; verified live against alpus.ba + the real OLX account (webhook simulation with the plugin's exact payload/headers, and a real 1-minute sweep run). No new migration.
+   - **Sweep** (`BulkSyncService.syncStore`, `@Scheduled` via `SyncScheduler`, default every 10 min, config `app.sync.*`): page `/catalog-hashes` → re-sync links whose hash changed (null `woo_hash` = changed) → **auto-link** unlinked products, but only when the sync can fully proceed right now (publish status + exactly one OLX account on the user + first category mapped + default city set); blockers stay silent in the sweep (they'd repeat every run) and are logged once per event on the webhook path. Per-store try/catch isolates dead stores; programmatic `olx-listings-all` eviction per affected user.
+   - **Log spam control**: failed/skipped sweep outcomes are not re-logged while the newest log for that link has identical action+status+message; successes always log. Manual `POST /sync` stays forced (no hash gate).
+   - **Webhook** `POST /webhook` (permitAll): plugin sends `X-AutoVendor-Key` = the store's API key + `{event, product_id, site_url, timestamp}`. Auth = normalize `site_url` → all `woo_stores` with that URL → constant-time key compare (`MessageDigest.isEqual`) → **every** matching store processed (same URL can belong to several users — observed live: second tenant got its own skipped log). 401 when nothing matches; unknown events → 200 + warn (fire-and-forget caller). `product.updated`/`created` → hash-gate (absorbs WP's double-fires — verified live) then sync existing link or auto-link; `product.deleted` → `SyncEngine.hide` (listing hidden on OLX, link kept, `action="hide"` log).
+   - **Token upkeep**: hourly `@Scheduled` re-login for accounts expiring within 30 min (`OlxTokenManager.refreshIfExpiringWithin`); lazy refresh in `withAccountToken` remains the fallback.
+   - **Scheduling infra**: `@EnableScheduling` lives in `SchedulingConfig` behind `app.sync.scheduling-enabled` — tests disable it centrally via a `DynamicPropertyRegistrar` in `TestcontainersConfiguration` and call the service methods directly. Virtual threads enabled (`spring.threads.virtual.enabled: true`). Single-threaded scheduler = sweep runs never overlap.
+   - **Default-city pre-check** on the engine's create path → `skipped` "OLX account has no default city set" before any OLX call.
+   - Note: the single-listing `GET /listings/{id}` still reports `status: active` for hidden listings (same OLX quirk as the hidden-list endpoint) — verify hides via `?status=hidden`.
+   - Frontend: history page gained the `skipped` filter/badge and the `hide` action label; the store detail "Webhook Logovi" tab now shows real per-store history via `GET /sync/history?store_id=`.
+   - Deviation from the original sketch: **no separate stock job** — the plugin's product hash already covers stock/price/images/text, so the hash-gated sweep detects stock changes; a stock-only path would have needed a stored stock snapshot + an unverified partial-PUT for no extra coverage.
+
+**Next: step 9** — Attribute mapping: add per-product attributes to the plugin DTO (plugin swaps `name`/`slug` semantics — `name` holds the label on `/attributes`, while per-product attrs use `name` = taxonomy, `label` = human), live-pin OLX's undocumented `attributes` array element format on create/update, map Woo values to OLX option strings, mapping UI. Then steps 11+ (sponsored/discounts/limits, analytics, mock cutover).
 
 ---
 

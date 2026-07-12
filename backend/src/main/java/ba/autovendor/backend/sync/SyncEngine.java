@@ -99,6 +99,9 @@ public class SyncEngine {
     }
 
     private SyncOutcome create(ProductLink link, OlxAccount account, WooPluginProductDto product) {
+        if (account.getDefaultCityId() == null) {
+            return new SyncOutcome("create", SyncStatus.skipped, "OLX account has no default city set");
+        }
         if (product.categories() == null || product.categories().isEmpty()) {
             return new SyncOutcome("create", SyncStatus.skipped, "Product has no WooCommerce category to map");
         }
@@ -134,6 +137,22 @@ public class SyncEngine {
         return new SyncOutcome("create", SyncStatus.success, message);
     }
 
+    /** Webhook product.deleted: hide the OLX listing but keep the link (reversible). */
+    public SyncOutcome hide(ProductLink link, OlxAccount account) {
+        if (link.getOlxListingId() == null) {
+            return new SyncOutcome("hide", SyncStatus.skipped, "No OLX listing to hide");
+        }
+        try {
+            tokenManager.withAccountToken(account, token -> {
+                olxApiClient.hideListing(token, link.getOlxListingId());
+                return null;
+            });
+            return new SyncOutcome("hide", SyncStatus.success, "Listing hidden after WooCommerce product deletion");
+        } catch (Exception e) {
+            return new SyncOutcome("hide", SyncStatus.failed, e.getMessage());
+        }
+    }
+
     private void markSynced(ProductLink link, WooPluginProductDto product) {
         link.markSynced(product.hash(), OffsetDateTime.now());
         linkRepository.save(link);
@@ -161,7 +180,7 @@ public class SyncEngine {
         put(payload, "city_id", account.getDefaultCityId());
         put(payload, "category_id", olxCategoryId);
         // OLX rejects category-bearing payloads without an attributes field, even when
-        // the category has no required attributes. Attribute mapping itself is step 8.
+        // the category has no required attributes. Attribute mapping itself is step 9.
         payload.put("attributes", List.of());
         put(payload, "sku_number", product.sku());
         payload.put("available", "instock".equals(product.stockStatus()));

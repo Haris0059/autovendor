@@ -2,6 +2,10 @@ spring:
   application:
     name: backend
 
+  threads:
+    virtual:
+      enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5433/autovendor
     username: postgres
@@ -47,3 +51,7 @@ app:
   woo:
     connect-timeout-seconds: 5
     read-timeout-seconds: 30
+  sync:
+    scheduling-enabled: true
+    job-interval: PT10M
+    token-refresh-interval: PT1H

@@ -3,12 +3,19 @@ package ba.autovendor.backend;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
+
+    /** No background sweeps racing test fixtures — job logic is tested by direct calls. */
+    @Bean
+    DynamicPropertyRegistrar schedulingDisabled() {
+        return registry -> registry.add("app.sync.scheduling-enabled", () -> "false");
+    }
 
     @Bean
     @ServiceConnection

@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Client for the AutoVendor WordPress plugin (/wp-json/autovendor/v1) — auth via the
@@ -77,6 +78,16 @@ public class WooPluginClient {
     public WooCatalogPageDto getCatalog(String storeUrl, String apiKey, int page, int perPage) {
         return exchange(() -> restClient.get()
                 .uri(storeUrl + API_BASE_PATH + "/catalog?page=" + page + "&per_page=" + perPage)
+                .header(API_KEY_HEADER, apiKey)
+                .retrieve()
+                .body(WooCatalogPageDto.class));
+    }
+
+    /** Bulk fetch by id (plugin caps the page to the id count, so one call per batch). */
+    public WooCatalogPageDto getCatalogByIds(String storeUrl, String apiKey, List<Long> ids) {
+        String joined = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+        return exchange(() -> restClient.get()
+                .uri(storeUrl + API_BASE_PATH + "/catalog?ids=" + joined)
                 .header(API_KEY_HEADER, apiKey)
                 .retrieve()
                 .body(WooCatalogPageDto.class));

@@ -204,6 +204,27 @@ class TriggerSyncIntegrationTest {
     }
 
     @Test
+    void createWithoutDefaultCityIsSkipped() throws Exception {
+        String jwt = registerUser("a@test.ba");
+        long accountId = createOlxAccount(jwt, null);
+        long storeId = createWooStore(jwt);
+        long linkId = createLink(jwt, accountId, storeId, 1001, null, "woo_to_olx");
+        createMapping(jwt, 10, 6);
+
+        when(wooPluginClient.getProduct(anyString(), anyString(), eq(1001L))).thenReturn(product(1001));
+
+        mockMvc.perform(post("/sync")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"product_link_id\": " + linkId + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("skipped"))
+                .andExpect(jsonPath("$.message").value("OLX account has no default city set"));
+
+        verify(olxApiClient, never()).createListing(anyString(), anyMap());
+    }
+
+    @Test
     void unsupportedDirectionsAreSkippedWithoutClientCalls() throws Exception {
         String jwt = registerUser("a@test.ba");
         long accountId = createOlxAccount(jwt, 5L);

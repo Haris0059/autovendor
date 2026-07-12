@@ -12,4 +12,6 @@ public interface WooStoreRepository extends JpaRepository<WooStore, Long> {
     Optional<WooStore> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByUserIdAndStoreUrl(Long userId, String storeUrl);
+
+    List<WooStore> findAllByStoreUrl(String storeUrl);
 }

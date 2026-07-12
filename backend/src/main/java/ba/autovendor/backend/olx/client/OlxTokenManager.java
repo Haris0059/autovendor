@@ -47,6 +47,20 @@ public class OlxTokenManager {
         }
     }
 
+    /**
+     * Scheduled-job entry: proactively re-login when the token expires within
+     * {@code window}. Returns true when a refresh actually happened.
+     */
+    public boolean refreshIfExpiringWithin(OlxAccount account, Duration window) {
+        if (account.getToken() != null
+                && account.getTokenExpiresAt() != null
+                && account.getTokenExpiresAt().isAfter(OffsetDateTime.now().plus(window))) {
+            return false;
+        }
+        refresh(account);
+        return true;
+    }
+
     private String refresh(OlxAccount account) {
         OlxLoginResult login = olxApiClient.login(account.getUsername(), account.getPassword());
         account.updateToken(login.token(), login.olxUserId(), OffsetDateTime.now().plus(tokenTtl));

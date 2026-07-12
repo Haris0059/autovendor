@@ -220,11 +220,11 @@ export default function SyncHistoryPage() {
                       {log.message}
                     </TableCell>
                     <TableCell className="text-right">
-                      {log.status === "failed" && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleRetry(log.product_link_id)}
+                      {log.status === "failed" && log.product_link_id != null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRetry(log.product_link_id!)}
                           disabled={triggerSync.isPending}
                         >
                           <RefreshCwIcon className={`size-4 ${triggerSync.isPending ? "animate-spin" : ""}`} />

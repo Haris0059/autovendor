@@ -9,6 +9,8 @@ import {
   useWooStoreAttributes,
   useTestWooStoreConnection,
 } from "@/hooks/use-woo-stores"
+import { LinkProductDialog } from "@/components/sync/link-product-dialog"
+import type { WooProduct } from "@/types/woocommerce"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -60,6 +62,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
   const testConnection = useTestWooStoreConnection()
 
   const [activeTab, setActiveTab] = useState("products")
+  const [linkProduct, setLinkProduct] = useState<WooProduct | null>(null)
 
   const handleTest = () => {
     if (!store) return
@@ -266,7 +269,7 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="secondary">
+                          <Button size="sm" variant="secondary" onClick={() => setLinkProduct(product)}>
                             <LinkIcon className="mr-2 size-3" />
                             Poveži
                           </Button>
@@ -409,6 +412,16 @@ export default function StoreDetailPage({ params }: { params: Promise<{ id: stri
           </Card>
         </TabsContent>
       </Tabs>
+
+      {linkProduct && (
+        <LinkProductDialog
+          key={linkProduct.id}
+          open
+          onOpenChange={(open) => !open && setLinkProduct(null)}
+          initialWooStoreId={storeId}
+          initialWooProductId={linkProduct.id}
+        />
+      )}
     </div>
   )
 }

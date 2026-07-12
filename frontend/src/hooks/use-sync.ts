@@ -105,7 +105,7 @@ export function useCreateProductLink() {
     mutationFn: async (data: {
       olx_account_id: number;
       woo_store_id: number;
-      olx_listing_id: number;
+      olx_listing_id: number | null;
       woo_product_id: number;
       sync_direction: SyncDirection;
     }) => {

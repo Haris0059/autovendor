@@ -32,12 +32,15 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 const linkSchema = z.object({
   olx_account_id: z.string().min(1, "Odaberite OLX profil"),
   woo_store_id: z.string().min(1, "Odaberite shop"),
-  olx_listing_id: z.string().min(1, "Odaberite OLX artikal"),
+  olx_listing_id: z.string().optional(),
   woo_product_id: z.string().min(1, "Odaberite WooCommerce proizvod"),
   sync_direction: z.enum(["woo_to_olx", "olx_to_woo"]),
 })
 
 type LinkFormValues = z.infer<typeof linkSchema>
+
+const NEW_LISTING = "new"
+const NEW_LISTING_LABEL = "Novi artikal (kreira se pri prvoj sinhronizaciji)"
 
 interface LinkProductDialogProps {
   open: boolean
@@ -84,7 +87,10 @@ export function LinkProductDialog({
     createLink.mutate({
       olx_account_id: parseInt(values.olx_account_id),
       woo_store_id: parseInt(values.woo_store_id),
-      olx_listing_id: parseInt(values.olx_listing_id),
+      olx_listing_id:
+        values.olx_listing_id && values.olx_listing_id !== NEW_LISTING
+          ? parseInt(values.olx_listing_id)
+          : null,
       woo_product_id: parseInt(values.woo_product_id),
       sync_direction: values.sync_direction,
     }, {
@@ -106,7 +112,8 @@ export function LinkProductDialog({
         <DialogHeader>
           <DialogTitle>Poveži artikle</DialogTitle>
           <DialogDescription>
-            Ručno povežite postojeći OLX artikal sa WooCommerce proizvodom.
+            Povežite WooCommerce proizvod sa postojećim OLX artiklom, ili odaberite
+            &quot;Novi artikal&quot; da se kreira pri prvoj sinhronizaciji.
           </DialogDescription>
         </DialogHeader>
 
@@ -190,10 +197,13 @@ export function LinkProductDialog({
                 OLX Artikal
               </FieldLabel>
               <Select
-                items={(accountListings ?? []).map((l) => ({
-                  value: l.id.toString(),
-                  label: `${l.title} (ID: ${l.id})`,
-                }))}
+                items={[
+                  { value: NEW_LISTING, label: NEW_LISTING_LABEL },
+                  ...(accountListings ?? []).map((l) => ({
+                    value: l.id.toString(),
+                    label: `${l.title} (ID: ${l.id})`,
+                  })),
+                ]}
                 value={form.watch("olx_listing_id")}
                 onValueChange={(v) => form.setValue("olx_listing_id", v ?? "")}
                 disabled={!selectedAccountId || listingsLoading}
@@ -202,6 +212,7 @@ export function LinkProductDialog({
                   <SelectValue placeholder={listingsLoading ? "Učitavanje..." : "Odaberi artikal"} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NEW_LISTING}>{NEW_LISTING_LABEL}</SelectItem>
                   {accountListings?.map(l => (
                     <SelectItem key={l.id} value={l.id.toString()}>
                       {l.title} (ID: {l.id})

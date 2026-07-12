@@ -18,6 +18,7 @@ public record WooPluginProductDto(
         List<WooPluginCategoryDto> categories,
         List<WooPluginImageDto> images,
         String description,
-        String shortDescription
+        String shortDescription,
+        List<WooProductAttributeDto> attributes
 ) {
 }

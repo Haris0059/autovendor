@@ -10,7 +10,7 @@ The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user m
 
 ## Status (updated 2026-07-12)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (134 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (143 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
@@ -60,7 +60,13 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
    - Frontend: history page gained the `skipped` filter/badge and the `hide` action label; the store detail "Webhook Logovi" tab now shows real per-store history via `GET /sync/history?store_id=`.
    - Deviation from the original sketch: **no separate stock job** — the plugin's product hash already covers stock/price/images/text, so the hash-gated sweep detects stock changes; a stock-only path would have needed a stored stock snapshot + an unverified partial-PUT for no extra coverage.
 
-**Next: step 9** — Attribute mapping: add per-product attributes to the plugin DTO (plugin swaps `name`/`slug` semantics — `name` holds the label on `/attributes`, while per-product attrs use `name` = taxonomy, `label` = human), live-pin OLX's undocumented `attributes` array element format on create/update, map Woo values to OLX option strings, mapping UI. Then steps 11+ (sponsored/discounts/limits, analytics, mock cutover).
+9. ✅ **Attribute mapping (defaults + auto-match)** — category mappings carry default values for the OLX category's attributes (`attribute_defaults` JSONB, V5); at sync time a product's own Woo attribute values override a default when they match an OLX option. Live-verified end-to-end (mapping created through the new dialog → product 3001 published into required-attribute category 1179 → public page shows "Vrsta: Za keramiku" → update path keeps attributes → cleanup).
+   - ✅ **OLX `attributes` payload format pinned live (July 2026)**: array of `{"id": <attributeId>, "value": "<exact option string>"}` — works on create and update; OLX validates per element and errors are keyed by the attribute id (`{"3753": "Vrijednost X za polje Vrsta nije validno"}`). Wrong values 422 — so acceptance means persistence (also confirmed on the public page's "Osobine" section).
+   - **Validation** (create + `PUT /sync/mappings/{id}`): via cached `CategoryService.getAttributes`, every `required` attribute needs a default (decided with Haris — mapped categories then can never fail OLX attribute validation), keys must exist, values must be in `options`. `AttributeResponse` now carries the attribute `id` (the engine needs it for the payload; ⚠️ old Redis cache entries lack it — flush `olx-categories` on deploy).
+   - **Engine resolution** per category attribute: auto-match Woo product attribute (label/name vs display_name/name, value vs options, case/diacritic-insensitive with a manual đ→d map — đ has no NFD decomposition) → mapping default → required-with-no-value skips *before* any OLX call ("set a default on the category mapping"), optional omitted. Plugin per-product attrs now mapped (`WooProductAttributeDto`: `name` = taxonomy, `label` = human, `options` = values).
+   - **Mapping dialog** got a 4-level cascading OLX category picker (top-level-only select was a dead end — attribute-bearing categories are leaves 3+ levels deep; the listing form still has the old 2-level picker, worth aligning later), renders one field per attribute (select for option-bearing, text otherwise), blocks save until required defaults are set, edit action (pencil) reuses the dialog with a `PUT`; defaults count badge in the table.
+
+**Next: steps 11+** — Sponsored/discounts/limits endpoints, analytics (derivable from `sync_logs` + listing counts), frontend mock cutover (`USE_MOCKS=false` default). Also worth folding in: the listing form's category picker only goes 2 levels deep (mappings dialog now does 4) and bootstrap leftovers (Dockerfile, backend in docker-compose, actuator healthcheck).
 
 ---
 

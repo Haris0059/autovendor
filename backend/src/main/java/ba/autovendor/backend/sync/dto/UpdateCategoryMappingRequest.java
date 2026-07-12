@@ -6,9 +6,8 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Map;
 
-public record CreateCategoryMappingRequest(
-        @NotNull Long wooCategoryId,
-        @NotBlank @Size(max = 255) String wooCategoryName,
+/** The Woo category is the mapping's identity — retargeting the OLX side and defaults only. */
+public record UpdateCategoryMappingRequest(
         @NotNull Long olxCategoryId,
         @NotBlank @Size(max = 255) String olxCategoryName,
         Map<String, String> attributeDefaults

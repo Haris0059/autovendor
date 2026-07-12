@@ -17,6 +17,7 @@ public final class CategoryMapper {
 
     public static AttributeResponse toResponse(OlxAttributeDto dto) {
         return new AttributeResponse(
+                dto.id(),
                 dto.type(),
                 dto.name(),
                 dto.inputType(),

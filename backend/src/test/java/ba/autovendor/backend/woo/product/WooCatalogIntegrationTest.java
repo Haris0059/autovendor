@@ -253,7 +253,7 @@ class WooCatalogIntegrationTest {
                 "29.99", "39.99", "29.99", "instock", 5,
                 List.of(new WooPluginCategoryDto(10L, "Auto dijelovi", "auto-dijelovi", null)),
                 List.of(new WooPluginImageDto(7L, "https://img.test/1.jpg", "slika", "alt")),
-                "Opis proizvoda", "Kratki opis"
+                "Opis proizvoda", "Kratki opis", null
         );
     }
 

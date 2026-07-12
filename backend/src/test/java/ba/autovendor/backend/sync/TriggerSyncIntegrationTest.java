@@ -5,6 +5,7 @@ import ba.autovendor.backend.common.OlxApiException;
 import ba.autovendor.backend.common.WooPluginException;
 import ba.autovendor.backend.olx.client.OlxApiClient;
 import ba.autovendor.backend.olx.client.OlxLoginResult;
+import ba.autovendor.backend.olx.client.dto.OlxAttributeDto;
 import ba.autovendor.backend.olx.client.dto.OlxImageDto;
 import ba.autovendor.backend.olx.client.dto.OlxListingDto;
 import ba.autovendor.backend.user.UserRepository;
@@ -13,6 +14,7 @@ import ba.autovendor.backend.woo.client.dto.WooHashPageDto;
 import ba.autovendor.backend.woo.client.dto.WooPluginCategoryDto;
 import ba.autovendor.backend.woo.client.dto.WooPluginImageDto;
 import ba.autovendor.backend.woo.client.dto.WooPluginProductDto;
+import ba.autovendor.backend.woo.client.dto.WooProductAttributeDto;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -368,6 +370,93 @@ class TriggerSyncIntegrationTest {
         assertThat(Objects.requireNonNull(cacheManager.getCache("olx-listings-all")).get(userId)).isNull();
     }
 
+    @Test
+    void createSendsResolvedAttributesFromDefaults() throws Exception {
+        String jwt = registerUser("a@test.ba");
+        long accountId = createOlxAccount(jwt, 5L);
+        long storeId = createWooStore(jwt);
+        long linkId = createLink(jwt, accountId, storeId, 1001, null, "woo_to_olx");
+        stubCategoryAttributes(6L, requiredVrsta(), optionalNamjena());
+        createMappingWithDefaults(jwt, 10, 6, "vrsta", "Za keramiku");
+
+        when(wooPluginClient.getProduct(anyString(), anyString(), eq(1001L))).thenReturn(product(1001));
+        when(olxApiClient.createListing(anyString(), anyMap())).thenReturn(listingDto(555L));
+        when(olxApiClient.uploadImageByUrl(anyString(), anyLong(), anyString()))
+                .thenReturn(List.of(new OlxImageDto(77L, "img", null, true)));
+
+        mockMvc.perform(post("/sync")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"product_link_id\": " + linkId + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> payload = ArgumentCaptor.forClass(Map.class);
+        verify(olxApiClient).createListing(anyString(), payload.capture());
+        // Pinned live (July 2026): element shape is {"id": <attributeId>, "value": "<exact option>"};
+        // the optional attribute without a value is omitted entirely.
+        assertThat(payload.getValue().get("attributes"))
+                .isEqualTo(List.of(Map.of("id", 3753L, "value", "Za keramiku")));
+    }
+
+    @Test
+    void wooAttributeValuesOverrideDefaults() throws Exception {
+        String jwt = registerUser("a@test.ba");
+        long accountId = createOlxAccount(jwt, 5L);
+        long storeId = createWooStore(jwt);
+        long linkId = createLink(jwt, accountId, storeId, 1001, 4242L, "woo_to_olx");
+        stubCategoryAttributes(6L, requiredVrsta(), optionalNamjena());
+        createMappingWithDefaults(jwt, 10, 6, "vrsta", "Ostalo");
+
+        // Lowercase + diacritic-free Woo values must resolve to the exact OLX option strings.
+        WooPluginProductDto product = productWithAttributes(1001,
+                new WooProductAttributeDto("pa_vrsta", "Vrsta", List.of("za keramiku"), true, false),
+                new WooProductAttributeDto("pa_namjena", "Namjena", List.of("hobi ili kucna radionica"), true, false));
+        when(wooPluginClient.getProduct(anyString(), anyString(), eq(1001L))).thenReturn(product);
+        when(olxApiClient.updateListing(anyString(), eq(4242L), anyMap())).thenReturn(listingDto(4242L));
+
+        mockMvc.perform(post("/sync")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"product_link_id\": " + linkId + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> payload = ArgumentCaptor.forClass(Map.class);
+        verify(olxApiClient).updateListing(anyString(), eq(4242L), payload.capture());
+        assertThat(payload.getValue().get("attributes")).isEqualTo(List.of(
+                Map.of("id", 3753L, "value", "Za keramiku"),
+                Map.of("id", 7651L, "value", "Hobi ili Kućna radionica")));
+    }
+
+    @Test
+    void missingRequiredAttributeSkipsBeforeAnyOlxCall() throws Exception {
+        String jwt = registerUser("a@test.ba");
+        long accountId = createOlxAccount(jwt, 5L);
+        long storeId = createWooStore(jwt);
+        long linkId = createLink(jwt, accountId, storeId, 1001, null, "woo_to_olx");
+        // Pre-step-9 mapping (no defaults): create it while the category has no
+        // attributes, then evict the cache and make the attribute required.
+        createMapping(jwt, 10, 6);
+        Objects.requireNonNull(cacheManager.getCache("olx-categories")).clear();
+        stubCategoryAttributes(6L, requiredVrsta());
+
+        when(wooPluginClient.getProduct(anyString(), anyString(), eq(1001L))).thenReturn(product(1001));
+
+        mockMvc.perform(post("/sync")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"product_link_id\": " + linkId + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("skipped"))
+                .andExpect(jsonPath("$.message").value(
+                        "Required OLX attribute 'Vrsta' has no value (set a default on the category mapping)"));
+
+        verify(olxApiClient, never()).createListing(anyString(), anyMap());
+    }
+
     // Fixtures
 
     private static WooPluginProductDto product(long id) {
@@ -377,7 +466,7 @@ class TriggerSyncIntegrationTest {
                 List.of(new WooPluginCategoryDto(10L, "Auto dijelovi", "auto-dijelovi", null)),
                 List.of(new WooPluginImageDto(1L, "https://img.test/1.jpg", "a", ""),
                         new WooPluginImageDto(2L, "https://img.test/2.jpg", "b", "")),
-                "<h2>Opis</h2> proizvoda", "<p>Kratki&nbsp;opis</p>"
+                "<h2>Opis</h2> proizvoda", "<p>Kratki&nbsp;opis</p>", null
         );
     }
 
@@ -385,7 +474,7 @@ class TriggerSyncIntegrationTest {
         return new WooPluginProductDto(
                 id, "hash-" + id, "Proizvod", "proizvod", "SKU-1", "publish",
                 "10.00", "10.00", "", "instock", 5,
-                List.of(), List.of(), "Opis", "Kratki"
+                List.of(), List.of(), "Opis", "Kratki", null
         );
     }
 
@@ -456,5 +545,41 @@ class TriggerSyncIntegrationTest {
                                  "olx_category_id": %d, "olx_category_name": "Auto dijelovi OLX"}
                                 """.formatted(wooCategoryId, olxCategoryId)))
                 .andExpect(status().isCreated());
+    }
+
+    private void createMappingWithDefaults(String jwt, long wooCategoryId, long olxCategoryId,
+                                           String attrName, String attrValue) throws Exception {
+        mockMvc.perform(post("/sync/mappings")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"woo_category_id": %d, "woo_category_name": "Auto dijelovi",
+                                 "olx_category_id": %d, "olx_category_name": "Auto dijelovi OLX",
+                                 "attribute_defaults": {"%s": "%s"}}
+                                """.formatted(wooCategoryId, olxCategoryId, attrName, attrValue)))
+                .andExpect(status().isCreated());
+    }
+
+    private void stubCategoryAttributes(long categoryId, OlxAttributeDto... attributes) {
+        when(olxApiClient.getCategoryAttributes(eq(categoryId))).thenReturn(List.of(attributes));
+    }
+
+    private static OlxAttributeDto requiredVrsta() {
+        return new OlxAttributeDto(3753L, "string", "vrsta", "select", "Vrsta",
+                List.of("Za staklo", "Za keramiku", "Ostalo"), true);
+    }
+
+    private static OlxAttributeDto optionalNamjena() {
+        return new OlxAttributeDto(7651L, "string", "namjena", "select", "Namjena",
+                List.of("Profesionalna upotreba", "Hobi ili Kućna radionica"), false);
+    }
+
+    private static WooPluginProductDto productWithAttributes(long id, WooProductAttributeDto... attributes) {
+        return new WooPluginProductDto(
+                id, "hash-" + id, "Proizvod", "proizvod", "SKU-1", "publish",
+                "10.00", "10.00", "", "instock", 5,
+                List.of(new WooPluginCategoryDto(10L, "Auto dijelovi", "auto-dijelovi", null)),
+                List.of(), "Opis", "Kratki", List.of(attributes)
+        );
     }
 }

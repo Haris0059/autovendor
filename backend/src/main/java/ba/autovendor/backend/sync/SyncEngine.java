@@ -1,15 +1,20 @@
 package ba.autovendor.backend.sync;
 
 import ba.autovendor.backend.olx.account.OlxAccount;
+import ba.autovendor.backend.olx.category.CategoryService;
+import ba.autovendor.backend.olx.category.dto.AttributeResponse;
 import ba.autovendor.backend.olx.client.OlxApiClient;
 import ba.autovendor.backend.olx.client.OlxTokenManager;
 import ba.autovendor.backend.olx.client.dto.OlxListingDto;
 import ba.autovendor.backend.woo.client.WooPluginClient;
 import ba.autovendor.backend.woo.client.dto.WooPluginProductDto;
+import ba.autovendor.backend.woo.client.dto.WooProductAttributeDto;
 import ba.autovendor.backend.woo.store.WooStore;
 import org.springframework.stereotype.Component;
 
+import java.text.Normalizer;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,19 +40,22 @@ public class SyncEngine {
     private final ImagePipeline imagePipeline;
     private final CategoryMappingRepository mappingRepository;
     private final ProductLinkRepository linkRepository;
+    private final CategoryService categoryService;
 
     public SyncEngine(WooPluginClient wooPluginClient,
                       OlxApiClient olxApiClient,
                       OlxTokenManager tokenManager,
                       ImagePipeline imagePipeline,
                       CategoryMappingRepository mappingRepository,
-                      ProductLinkRepository linkRepository) {
+                      ProductLinkRepository linkRepository,
+                      CategoryService categoryService) {
         this.wooPluginClient = wooPluginClient;
         this.olxApiClient = olxApiClient;
         this.tokenManager = tokenManager;
         this.imagePipeline = imagePipeline;
         this.mappingRepository = mappingRepository;
         this.linkRepository = linkRepository;
+        this.categoryService = categoryService;
     }
 
     public record SyncOutcome(String action, SyncStatus status, String message) {
@@ -88,8 +96,13 @@ public class SyncEngine {
     private SyncOutcome update(ProductLink link, OlxAccount account, WooPluginProductDto product) {
         // Category mapping is optional on update: when absent, category_id is omitted
         // and the listing keeps its current OLX category.
-        Long categoryId = resolveOlxCategoryId(link, product).orElse(null);
-        Map<String, Object> payload = buildPayload(product, account, categoryId);
+        CategoryMapping mapping = resolveMapping(link, product).orElse(null);
+        AttributeResolution attributes = resolveAttributes(product, mapping);
+        if (attributes.missingRequired() != null) {
+            return skippedForMissingAttribute("update", attributes.missingRequired());
+        }
+        Map<String, Object> payload = buildPayload(product, account,
+                mapping != null ? mapping.getOlxCategoryId() : null, attributes.values());
 
         tokenManager.withAccountToken(account,
                 token -> olxApiClient.updateListing(token, link.getOlxListingId(), payload));
@@ -113,7 +126,12 @@ public class SyncEngine {
                     "No category mapping for Woo category '" + wooCategory.name() + "' (id " + wooCategory.id() + ")");
         }
 
-        Map<String, Object> payload = buildPayload(product, account, mapping.get().getOlxCategoryId());
+        AttributeResolution attributes = resolveAttributes(product, mapping.get());
+        if (attributes.missingRequired() != null) {
+            return skippedForMissingAttribute("create", attributes.missingRequired());
+        }
+        Map<String, Object> payload = buildPayload(product, account,
+                mapping.get().getOlxCategoryId(), attributes.values());
         OlxListingDto created = tokenManager.withAccountToken(account,
                 token -> olxApiClient.createListing(token, payload));
 
@@ -158,19 +176,96 @@ public class SyncEngine {
         linkRepository.save(link);
     }
 
-    private Optional<Long> resolveOlxCategoryId(ProductLink link, WooPluginProductDto product) {
+    private Optional<CategoryMapping> resolveMapping(ProductLink link, WooPluginProductDto product) {
         if (product.categories() == null || product.categories().isEmpty()) {
             return Optional.empty();
         }
-        return mappingRepository.findByUserIdAndWooCategoryId(link.getUserId(), product.categories().getFirst().id())
-                .map(CategoryMapping::getOlxCategoryId);
+        return mappingRepository.findByUserIdAndWooCategoryId(link.getUserId(), product.categories().getFirst().id());
+    }
+
+    private static SyncOutcome skippedForMissingAttribute(String action, String displayName) {
+        return new SyncOutcome(action, SyncStatus.skipped,
+                "Required OLX attribute '" + displayName + "' has no value (set a default on the category mapping)");
+    }
+
+    /** Resolved attribute payload, or the display name of a required attribute without a value. */
+    private record AttributeResolution(List<Map<String, Object>> values, String missingRequired) {
+    }
+
+    /**
+     * Values come from the product's own Woo attributes when they match an OLX
+     * option (normalized compare), falling back to the mapping's stored defaults.
+     * Pinned OLX element shape (live, July 2026): {@code {"id": <attributeId>, "value": "<exact option>"}}.
+     */
+    private AttributeResolution resolveAttributes(WooPluginProductDto product, CategoryMapping mapping) {
+        if (mapping == null) {
+            return new AttributeResolution(List.of(), null);
+        }
+        List<Map<String, Object>> values = new ArrayList<>();
+        for (AttributeResponse attribute : categoryService.getAttributes(mapping.getOlxCategoryId())) {
+            String value = autoMatch(product, attribute);
+            if (value == null && mapping.getAttributeDefaults() != null) {
+                value = mapping.getAttributeDefaults().get(attribute.name());
+            }
+            if (value == null || value.isBlank() || attribute.id() == null) {
+                if (Boolean.TRUE.equals(attribute.required())) {
+                    return new AttributeResolution(List.of(), attribute.displayName());
+                }
+                continue;
+            }
+            values.add(Map.of("id", attribute.id(), "value", value));
+        }
+        return new AttributeResolution(values, null);
+    }
+
+    /** First Woo attribute value that equals an OLX option after normalization → exact OLX option. */
+    private static String autoMatch(WooPluginProductDto product, AttributeResponse attribute) {
+        if (product.attributes() == null || attribute.options() == null || attribute.options().isEmpty()) {
+            return null;
+        }
+        for (WooProductAttributeDto wooAttribute : product.attributes()) {
+            if (!namesMatch(wooAttribute, attribute) || wooAttribute.options() == null) {
+                continue;
+            }
+            for (String wooValue : wooAttribute.options()) {
+                for (String option : attribute.options()) {
+                    if (normalize(wooValue).equals(normalize(option))) {
+                        return option;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean namesMatch(WooProductAttributeDto wooAttribute, AttributeResponse attribute) {
+        String olxDisplay = normalize(attribute.displayName());
+        String olxName = normalize(attribute.name());
+        String wooLabel = normalize(wooAttribute.label());
+        String wooName = normalize(wooAttribute.name());
+        return (!wooLabel.isEmpty() && (wooLabel.equals(olxDisplay) || wooLabel.equals(olxName)))
+                || (!wooName.isEmpty() && (wooName.equals(olxDisplay) || wooName.equals(olxName)));
+    }
+
+    /** Lowercase, diacritics stripped (đ has no NFD decomposition — mapped by hand). */
+    private static String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase()
+                .trim();
     }
 
     private static String actionFor(ProductLink link) {
         return link.getOlxListingId() != null ? "update" : "create";
     }
 
-    private static Map<String, Object> buildPayload(WooPluginProductDto product, OlxAccount account, Long olxCategoryId) {
+    private static Map<String, Object> buildPayload(WooPluginProductDto product, OlxAccount account,
+                                                    Long olxCategoryId, List<Map<String, Object>> attributes) {
         Map<String, Object> payload = new LinkedHashMap<>();
         put(payload, "title", truncate(product.name(), TITLE_MAX_LENGTH));
         put(payload, "short_description", stripHtml(product.shortDescription()));
@@ -180,8 +275,8 @@ public class SyncEngine {
         put(payload, "city_id", account.getDefaultCityId());
         put(payload, "category_id", olxCategoryId);
         // OLX rejects category-bearing payloads without an attributes field, even when
-        // the category has no required attributes. Attribute mapping itself is step 9.
-        payload.put("attributes", List.of());
+        // the category has no required attributes — always send the (possibly empty) array.
+        payload.put("attributes", attributes);
         put(payload, "sku_number", product.sku());
         payload.put("available", "instock".equals(product.stockStatus()));
         payload.put("listing_type", "sell");

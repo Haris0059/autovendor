@@ -8,8 +8,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 @Entity
 @Table(name = "category_mappings")
@@ -35,6 +38,11 @@ public class CategoryMapping {
     @Column(name = "olx_category_name", nullable = false)
     private String olxCategoryName;
 
+    /** OLX attribute name → exact option value; null on mappings created before step 9. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "attribute_defaults")
+    private Map<String, String> attributeDefaults;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -51,6 +59,15 @@ public class CategoryMapping {
         this.userId = userId;
         this.wooCategoryId = wooCategoryId;
         this.wooCategoryName = wooCategoryName;
+        this.olxCategoryId = olxCategoryId;
+        this.olxCategoryName = olxCategoryName;
+    }
+
+    public void setAttributeDefaults(Map<String, String> attributeDefaults) {
+        this.attributeDefaults = attributeDefaults;
+    }
+
+    public void updateOlxTarget(Long olxCategoryId, String olxCategoryName) {
         this.olxCategoryId = olxCategoryId;
         this.olxCategoryName = olxCategoryName;
     }

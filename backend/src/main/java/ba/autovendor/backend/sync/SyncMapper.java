@@ -26,7 +26,8 @@ public final class SyncMapper {
                 mapping.getWooCategoryId(),
                 mapping.getWooCategoryName(),
                 mapping.getOlxCategoryId(),
-                mapping.getOlxCategoryName()
+                mapping.getOlxCategoryName(),
+                mapping.getAttributeDefaults()
         );
     }
 

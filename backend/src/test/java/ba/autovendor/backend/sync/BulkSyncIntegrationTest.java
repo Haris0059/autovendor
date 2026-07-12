@@ -313,7 +313,7 @@ class BulkSyncIntegrationTest {
                 "19.99", "19.99", "", "instock", 5,
                 List.of(new WooPluginCategoryDto(10L, "Auto dijelovi", "auto-dijelovi", null)),
                 List.of(new WooPluginImageDto(1L, "https://img.test/1.jpg", "a", "")),
-                "Opis", "Kratki opis"
+                "Opis", "Kratki opis", null
         );
     }
 
@@ -322,7 +322,7 @@ class BulkSyncIntegrationTest {
                 id, "hash-" + id, "Proizvod " + id, "proizvod-" + id, "SKU-" + id, "draft",
                 "19.99", "19.99", "", "instock", 5,
                 List.of(new WooPluginCategoryDto(10L, "Auto dijelovi", "auto-dijelovi", null)),
-                List.of(), "Opis", "Kratki opis"
+                List.of(), "Opis", "Kratki opis", null
         );
     }
 

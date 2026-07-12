@@ -152,6 +152,7 @@ export function useCreateCategoryMapping() {
       woo_category_name: string;
       olx_category_id: number;
       olx_category_name: string;
+      attribute_defaults?: Record<string, string> | null;
     }) => {
       if (USE_MOCKS) {
         const created: CategoryMapping = { id: nextMappingId++, ...data };
@@ -159,6 +160,35 @@ export function useCreateCategoryMapping() {
         return mockDelay(created);
       }
       return api.post<CategoryMapping>("/sync/mappings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sync", "mappings"] });
+    },
+  });
+}
+
+export function useUpdateCategoryMapping() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: {
+        olx_category_id: number;
+        olx_category_name: string;
+        attribute_defaults?: Record<string, string> | null;
+      };
+    }) => {
+      if (USE_MOCKS) {
+        mockMappings = mockMappings.map((m) =>
+          m.id === id ? { ...m, ...data } : m
+        );
+        return mockDelay(mockMappings.find((m) => m.id === id)!);
+      }
+      return api.put<CategoryMapping>(`/sync/mappings/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sync", "mappings"] });

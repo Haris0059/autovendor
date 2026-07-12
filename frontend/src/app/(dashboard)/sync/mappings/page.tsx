@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { 
-  useCategoryMappings, 
-  useCreateCategoryMapping, 
-  useDeleteCategoryMapping 
+import {
+  useCategoryMappings,
+  useCreateCategoryMapping,
+  useUpdateCategoryMapping,
+  useDeleteCategoryMapping,
 } from "@/hooks/use-sync"
 import { useWooStores, useWooStoreCategories } from "@/hooks/use-woo-stores"
-import { useOlxCategories } from "@/hooks/use-categories"
+import { useOlxCategories, useCategoryAttributes } from "@/hooks/use-categories"
+import type { CategoryMapping } from "@/types/sync"
 import {
   Card,
   CardContent,
@@ -40,14 +42,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { 
-  PlusIcon, 
-  Trash2Icon, 
-  ArrowRightIcon, 
+import {
+  PlusIcon,
+  Trash2Icon,
+  PencilIcon,
+  ArrowRightIcon,
   Loader2Icon,
   SearchIcon,
   LayersIcon,
 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { toastMessages } from "@/lib/toast-messages"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
@@ -58,51 +62,121 @@ export default function CategoryMappingsPage() {
   const { data: mappings, isLoading: mappingsLoading } = useCategoryMappings()
   const { data: stores } = useWooStores()
   const createMapping = useCreateCategoryMapping()
+  const updateMapping = useUpdateCategoryMapping()
   const deleteMapping = useDeleteCategoryMapping()
 
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null)
   const { data: wooCategories, isLoading: wooLoading } = useWooStoreCategories(selectedStoreId || 0)
-  const { data: olxCategories, isLoading: olxLoading } = useOlxCategories()
 
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [editingMapping, setEditingMapping] = useState<CategoryMapping | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
 
   // Form state
   const [wooCatId, setWooCatId] = useState("")
-  const [olxCatId, setOlxCatId] = useState("")
+  // OLX category drill-down: one selection per level, deepest selection wins.
+  // OLX nests categories 3-4 deep; attribute-bearing categories are leaves.
+  const [catPath, setCatPath] = useState<({ id: number; name: string } | null)[]>([null, null, null, null])
+  const [attrDefaults, setAttrDefaults] = useState<Record<string, string>>({})
+
+  const level1 = useOlxCategories()
+  const level2 = useOlxCategories(catPath[0]?.id)
+  const level3 = useOlxCategories(catPath[1]?.id)
+  const level4 = useOlxCategories(catPath[2]?.id)
+  const levels = [level1, level2, level3, level4]
+
+  const deepestSelected = [...catPath].reverse().find(Boolean) ?? null
+  const effectiveOlxCat = deepestSelected
+    ?? (editingMapping
+      ? { id: editingMapping.olx_category_id, name: editingMapping.olx_category_name }
+      : null)
+
+  const { data: olxAttributes, isLoading: attrsLoading } = useCategoryAttributes(
+    effectiveOlxCat?.id ?? 0
+  )
+  const requiredMissing = (olxAttributes ?? []).some(
+    (a) => a.required && !attrDefaults[a.name]?.trim()
+  )
+
+  const selectCategoryAt = (level: number, value: string | null) => {
+    const options = levels[level].data ?? []
+    const chosen = options.find((c) => c.id.toString() === value) ?? null
+    setCatPath((prev) => {
+      const next = [...prev]
+      next[level] = chosen
+      for (let i = level + 1; i < next.length; i++) next[i] = null
+      return next
+    })
+    setAttrDefaults({})
+  }
+
+  const openAdd = () => {
+    setEditingMapping(null)
+    setWooCatId("")
+    setCatPath([null, null, null, null])
+    setAttrDefaults({})
+    setIsAddOpen(true)
+  }
+
+  const openEdit = (mapping: CategoryMapping) => {
+    setEditingMapping(mapping)
+    setWooCatId(mapping.woo_category_id.toString())
+    setCatPath([null, null, null, null])
+    setAttrDefaults(mapping.attribute_defaults ?? {})
+    setIsAddOpen(true)
+  }
 
   const filteredMappings = mappings?.filter(m => 
     m.woo_category_name.toLowerCase().includes(search.toLowerCase()) ||
     m.olx_category_name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleAdd = () => {
-    const wooCat = wooCategories?.find(c => c.id.toString() === wooCatId)
-    const olxCat = olxCategories?.find(c => c.id.toString() === olxCatId)
-
-    if (!wooCat || !olxCat) {
-      toast.error("Morate odabrati obje kategorije.")
+  const handleSave = () => {
+    const olxCat = effectiveOlxCat
+    if (!olxCat) {
+      toast.error("Morate odabrati OLX kategoriju.")
       return
     }
 
+    const cleaned = Object.fromEntries(
+      Object.entries(attrDefaults).filter(([, v]) => v?.trim())
+    )
+    const attributeDefaults = Object.keys(cleaned).length > 0 ? cleaned : null
+
+    const onSuccess = () => {
+      toast.success(toastMessages.sync.mappingCreateSuccess)
+      setIsAddOpen(false)
+    }
+    const onError = (error: unknown) => {
+      const message = error instanceof Error ? error.message : toastMessages.sync.mappingCreateError
+      toast.error(message)
+    }
+
+    if (editingMapping) {
+      updateMapping.mutate({
+        id: editingMapping.id,
+        data: {
+          olx_category_id: olxCat.id,
+          olx_category_name: olxCat.name,
+          attribute_defaults: attributeDefaults,
+        },
+      }, { onSuccess, onError })
+      return
+    }
+
+    const wooCat = wooCategories?.find(c => c.id.toString() === wooCatId)
+    if (!wooCat) {
+      toast.error("Morate odabrati obje kategorije.")
+      return
+    }
     createMapping.mutate({
       woo_category_id: wooCat.id,
       woo_category_name: wooCat.name,
       olx_category_id: olxCat.id,
       olx_category_name: olxCat.name,
-    }, {
-      onSuccess: () => {
-        toast.success(toastMessages.sync.mappingCreateSuccess)
-        setIsAddOpen(false)
-        setWooCatId("")
-        setOlxCatId("")
-      },
-      onError: (error: unknown) => {
-        const message = error instanceof Error ? error.message : toastMessages.sync.mappingCreateError
-        toast.error(message)
-      }
-    })
+      attribute_defaults: attributeDefaults,
+    }, { onSuccess, onError })
   }
 
   const handleDelete = () => {
@@ -131,7 +205,7 @@ export default function CategoryMappingsPage() {
         title="Mapiranje kategorija"
         description="Definišite u koju OLX kategoriju se smještaju proizvodi iz WooCommerce kategorija."
       >
-        <Button onClick={() => setIsAddOpen(true)}>
+        <Button onClick={openAdd}>
           <PlusIcon className="mr-2 size-4" />
           Novo mapiranje
         </Button>
@@ -214,17 +288,32 @@ export default function CategoryMappingsPage() {
                       <div className="flex items-center gap-2">
                         <div className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-600 dark:bg-blue-900/30">OLX</div>
                         {mapping.olx_category_name}
+                        {mapping.attribute_defaults && Object.keys(mapping.attribute_defaults).length > 0 && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {Object.keys(mapping.attribute_defaults).length} atr.
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setDeleteId(mapping.id)}
-                      >
-                        <Trash2Icon className="size-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => openEdit(mapping)}
+                        >
+                          <PencilIcon className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteId(mapping.id)}
+                        >
+                          <Trash2Icon className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -238,7 +327,9 @@ export default function CategoryMappingsPage() {
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Novo mapiranje kategorija</DialogTitle>
+            <DialogTitle>
+              {editingMapping ? "Uredi mapiranje kategorija" : "Novo mapiranje kategorija"}
+            </DialogTitle>
             <DialogDescription>
               Povežite kategoriju iz vašeg WooCommerce shopa sa odgovarajućom OLX kategorijom.
             </DialogDescription>
@@ -247,6 +338,9 @@ export default function CategoryMappingsPage() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="woo-cat">WooCommerce Kategorija</Label>
+              {editingMapping ? (
+                <Input value={editingMapping.woo_category_name} disabled />
+              ) : (
               <Select
                 items={(wooCategories ?? []).map((c) => ({ value: c.id.toString(), label: c.name }))}
                 value={wooCatId}
@@ -261,6 +355,7 @@ export default function CategoryMappingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              )}
             </div>
 
             <div className="flex justify-center py-1">
@@ -270,36 +365,127 @@ export default function CategoryMappingsPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="olx-cat">OLX Kategorija</Label>
-              <Select
-                items={(olxCategories ?? []).map((c) => ({ value: c.id.toString(), label: c.name }))}
-                value={olxCatId}
-                onValueChange={(v) => setOlxCatId(v ?? "")}
-              >
-                <SelectTrigger id="olx-cat">
-                  <SelectValue placeholder={olxLoading ? "Učitavanje..." : "Odaberi kategoriju"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {olxCategories?.map(c => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>OLX Kategorija</Label>
+              {editingMapping && !deepestSelected && (
+                <p className="text-xs text-muted-foreground">
+                  Trenutno: <span className="font-medium text-foreground">{editingMapping.olx_category_name}</span> — odaberite ispod da promijenite.
+                </p>
+              )}
+              {levels.map((level, i) => {
+                const options = level.data ?? []
+                if (i > 0 && (!catPath[i - 1] || options.length === 0)) return null
+                return (
+                  <Select
+                    key={i}
+                    items={options.map((c) => ({ value: c.id.toString(), label: c.name }))}
+                    value={catPath[i]?.id.toString() ?? ""}
+                    onValueChange={(v) => selectCategoryAt(i, v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        level.isLoading ? "Učitavanje..." :
+                        i === 0 ? "Odaberi kategoriju" : "Odaberi podkategoriju (opciono)"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.map(c => (
+                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              })}
               <p className="text-[10px] text-muted-foreground">
                 Napomena: Preporučujemo mapiranje do najnižih podkategorija radi tačnijih atributa.
               </p>
             </div>
+
+            {effectiveOlxCat && attrsLoading && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2Icon className="size-3 animate-spin" />
+                Učitavanje atributa kategorije...
+              </div>
+            )}
+            {effectiveOlxCat && !attrsLoading && (olxAttributes ?? []).length > 0 && (
+              <div className="grid gap-3 rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Zadane vrijednosti OLX atributa (proizvod ih može prepisati vlastitim atributima)
+                </p>
+                {olxAttributes!.map((attr) => (
+                  <div key={attr.name} className="grid gap-1.5">
+                    <Label className="text-xs">
+                      {attr.display_name}
+                      {attr.required && <span className="text-destructive"> *</span>}
+                    </Label>
+                    {attr.options && attr.options.length > 0 ? (
+                      <Select
+                        items={[
+                          { value: "__none", label: "—" },
+                          ...attr.options.map((o) => ({ value: o, label: o })),
+                        ]}
+                        value={attrDefaults[attr.name] ?? "__none"}
+                        onValueChange={(v) =>
+                          setAttrDefaults((prev) => {
+                            const next = { ...prev }
+                            if (!v || v === "__none") delete next[attr.name]
+                            else next[attr.name] = v
+                            return next
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">—</SelectItem>
+                          {attr.options.map((o) => (
+                            <SelectItem key={o} value={o}>{o}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        value={attrDefaults[attr.name] ?? ""}
+                        onChange={(e) =>
+                          setAttrDefaults((prev) => {
+                            const next = { ...prev }
+                            if (!e.target.value) delete next[attr.name]
+                            else next[attr.name] = e.target.value
+                            return next
+                          })
+                        }
+                        placeholder="Zadana vrijednost"
+                      />
+                    )}
+                  </div>
+                ))}
+                {requiredMissing && (
+                  <p className="text-[10px] text-destructive">
+                    Obavezni atributi (*) moraju imati zadanu vrijednost.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
               Otkaži
             </Button>
-            <Button 
-              onClick={handleAdd} 
-              disabled={createMapping.isPending || !wooCatId || !olxCatId}
+            <Button
+              onClick={handleSave}
+              disabled={
+                createMapping.isPending ||
+                updateMapping.isPending ||
+                (!editingMapping && !wooCatId) ||
+                !effectiveOlxCat ||
+                attrsLoading ||
+                requiredMissing
+              }
             >
-              {createMapping.isPending && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              {(createMapping.isPending || updateMapping.isPending) && (
+                <Loader2Icon className="mr-2 size-4 animate-spin" />
+              )}
               Sačuvaj mapiranje
             </Button>
           </DialogFooter>

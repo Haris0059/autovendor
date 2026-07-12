@@ -17,6 +17,7 @@ export interface CategoryMapping {
   woo_category_name: string;
   olx_category_id: number;
   olx_category_name: string;
+  attribute_defaults?: Record<string, string> | null;
 }
 
 export interface SyncLog {

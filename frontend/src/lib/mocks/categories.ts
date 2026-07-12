@@ -70,6 +70,7 @@ export const mockCategories: OlxCategory[] = [
 export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
   11: [
     {
+      id: 9001,
       type: "year",
       name: "godiste",
       input_type: "number",
@@ -78,6 +79,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
       required: true,
     },
     {
+      id: 9002,
       type: "km",
       name: "kilometraza",
       input_type: "number",
@@ -86,6 +88,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
       required: true,
     },
     {
+      id: 9003,
       type: "fuel",
       name: "gorivo",
       input_type: "select",
@@ -94,6 +97,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
       required: true,
     },
     {
+      id: 9004,
       type: "transmission",
       name: "mjenjac",
       input_type: "select",
@@ -104,6 +108,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
   ],
   21: [
     {
+      id: 9005,
       type: "area",
       name: "kvadratura",
       input_type: "number",
@@ -112,6 +117,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
       required: true,
     },
     {
+      id: 9006,
       type: "rooms",
       name: "broj_soba",
       input_type: "select",
@@ -122,6 +128,7 @@ export const mockCategoryAttributes: Record<number, OlxCategoryAttribute[]> = {
   ],
   31: [
     {
+      id: 9007,
       type: "brand",
       name: "proizvodjac",
       input_type: "select",

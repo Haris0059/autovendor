@@ -38,6 +38,7 @@ export interface OlxCategory {
 }
 
 export interface OlxCategoryAttribute {
+  id: number;
   type: string;
   name: string;
   input_type: string;

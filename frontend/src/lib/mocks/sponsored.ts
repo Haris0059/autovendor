@@ -1,26 +1,4 @@
-export interface MockSponsoredListing {
-  id: number;
-  listing_id: number;
-  account_id: number;
-  type: 1 | 2;
-  days: number;
-  refresh_every: number;
-  locations: string[];
-  started_at: string;
-  ends_at: string;
-  price_total: number;
-}
-
-export interface MockDiscount {
-  id: number;
-  listing_id: number;
-  account_id: number;
-  original_price: number;
-  discount_price: number;
-  days: 3 | 7 | 30;
-  started_at: string;
-  ends_at: string;
-}
+import type { OlxSponsorship, OlxDiscount } from "@/types/olx";
 
 function daysAgo(d: number): string {
   return new Date(Date.now() - d * 24 * 3600 * 1000).toISOString();
@@ -29,7 +7,7 @@ function daysAhead(d: number): string {
   return new Date(Date.now() + d * 24 * 3600 * 1000).toISOString();
 }
 
-export const mockSponsoredListings: MockSponsoredListing[] = [
+export const mockSponsoredListings: OlxSponsorship[] = [
   {
     id: 1,
     listing_id: 5001,
@@ -92,7 +70,7 @@ export const mockSponsoredListings: MockSponsoredListing[] = [
   },
 ];
 
-export const mockDiscounts: MockDiscount[] = [
+export const mockDiscounts: OlxDiscount[] = [
   {
     id: 1,
     listing_id: 5009,

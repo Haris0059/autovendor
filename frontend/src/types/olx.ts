@@ -55,6 +55,38 @@ export interface OlxCity {
   longitude: number | null;
 }
 
+export interface OlxSponsorship {
+  id: number;
+  listing_id: number;
+  account_id: number;
+  type: 1 | 2;
+  days: number;
+  refresh_every: number;
+  locations: string[];
+  started_at: string;
+  ends_at: string;
+  price_total: number;
+}
+
+export interface OlxDiscount {
+  id: number;
+  listing_id: number;
+  account_id: number;
+  original_price: number;
+  discount_price: number;
+  days: 3 | 7 | 30;
+  started_at: string;
+  ends_at: string;
+}
+
+export interface OlxSponsorPrice {
+  search: number;
+  refresh: number;
+  locations: number;
+  extras: number;
+  total: number;
+}
+
 export interface OlxListingLimits {
   cars: { used: number; limit: number };
   real_estate: { used: number; limit: number };

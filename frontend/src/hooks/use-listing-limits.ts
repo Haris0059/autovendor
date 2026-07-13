@@ -17,9 +17,7 @@ export function useListingLimits(accountId: number) {
           }
         );
       }
-      return api.get<OlxListingLimits>("/olx/listing-limits", {
-        params: { account_id: String(accountId) },
-      });
+      return api.get<OlxListingLimits>(`/olx/accounts/${accountId}/listing-limits`);
     },
     enabled: !!accountId,
   });
@@ -39,9 +37,7 @@ export function useRefreshLimits(accountId: number) {
           }
         );
       }
-      return api.get<OlxRefreshLimits>("/olx/listing/refresh/limits", {
-        params: { account_id: String(accountId) },
-      });
+      return api.get<OlxRefreshLimits>(`/olx/accounts/${accountId}/listing/refresh/limits`);
     },
     enabled: !!accountId,
   });

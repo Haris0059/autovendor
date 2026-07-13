@@ -61,7 +61,7 @@ export function SponsorDialog({
     defaultValues: {
       type: "1",
       days: "7",
-      refresh_every: "1",
+      refresh_every: "0",
       homepage: false,
     },
   })
@@ -150,7 +150,7 @@ export function SponsorDialog({
             <Field data-invalid={!!errors.days || undefined}>
               <FieldLabel>Trajanje (dana)</FieldLabel>
               <Select
-                items={[1, 3, 7, 15, 30].map((d) => ({
+                items={[1, 2, 3, 5, 7, 14, 21, 30].map((d) => ({
                   value: d.toString(),
                   label: `${d} ${d === 1 ? "dan" : "dana"}`,
                 }))}
@@ -161,7 +161,7 @@ export function SponsorDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[1, 3, 7, 15, 30].map(d => (
+                  {[1, 2, 3, 5, 7, 14, 21, 30].map(d => (
                     <SelectItem key={d} value={d.toString()}>{d} {d === 1 ? "dan" : "dana"}</SelectItem>
                   ))}
                 </SelectContent>
@@ -174,9 +174,9 @@ export function SponsorDialog({
               <Select
                 items={[
                   { value: "0", label: "Bez obnavljanja" },
-                  { value: "1", label: "Svaki sat" },
+                  { value: "3", label: "Svaka 3 sata" },
                   { value: "6", label: "Svakih 6 sati" },
-                  { value: "12", label: "Svakih 12 sati" },
+                  { value: "8", label: "Svakih 8 sati" },
                   { value: "24", label: "Jednom dnevno" },
                 ]}
                 value={refresh_every}
@@ -187,9 +187,9 @@ export function SponsorDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Bez obnavljanja</SelectItem>
-                  <SelectItem value="1">Svaki sat</SelectItem>
+                  <SelectItem value="3">Svaka 3 sata</SelectItem>
                   <SelectItem value="6">Svakih 6 sati</SelectItem>
-                  <SelectItem value="12">Svakih 12 sati</SelectItem>
+                  <SelectItem value="8">Svakih 8 sati</SelectItem>
                   <SelectItem value="24">Jednom dnevno</SelectItem>
                 </SelectContent>
               </Select>

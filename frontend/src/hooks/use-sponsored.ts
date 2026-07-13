@@ -1,15 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { USE_MOCKS, mockDelay } from "@/lib/mocks";
-import {
-  mockSponsoredListings,
-  mockDiscounts,
-  type MockSponsoredListing,
-  type MockDiscount,
-} from "@/lib/mocks/sponsored";
+import { mockSponsoredListings, mockDiscounts } from "@/lib/mocks/sponsored";
+import { useResolvedAccountId } from "@/hooks/use-listings";
+import type { OlxSponsorship, OlxDiscount, OlxSponsorPrice } from "@/types/olx";
 
-let sponsored: MockSponsoredListing[] = [...mockSponsoredListings];
-let discounts: MockDiscount[] = [...mockDiscounts];
+let sponsored: OlxSponsorship[] = [...mockSponsoredListings];
+let discounts: OlxDiscount[] = [...mockDiscounts];
 let nextSponsorId = 100;
 let nextDiscountId = 100;
 
@@ -18,7 +15,7 @@ export function useSponsoredListings() {
     queryKey: ["sponsored"],
     queryFn: () => {
       if (USE_MOCKS) return mockDelay([...sponsored]);
-      return api.get<MockSponsoredListing[]>("/olx/sponsored");
+      return api.get<OlxSponsorship[]>("/olx/sponsored");
     },
   });
 }
@@ -28,7 +25,7 @@ export function useDiscounts() {
     queryKey: ["discounts"],
     queryFn: () => {
       if (USE_MOCKS) return mockDelay([...discounts]);
-      return api.get<MockDiscount[]>("/olx/discounts");
+      return api.get<OlxDiscount[]>("/olx/discounts");
     },
   });
 }
@@ -42,8 +39,9 @@ interface SponsorPriceInput {
 }
 
 export function useSponsorPrice(input: SponsorPriceInput | null) {
+  const accountId = useResolvedAccountId();
   return useQuery({
-    queryKey: ["sponsor-price", input],
+    queryKey: ["sponsor-price", accountId, input],
     queryFn: async () => {
       if (!input) return null;
       if (USE_MOCKS) {
@@ -58,28 +56,26 @@ export function useSponsorPrice(input: SponsorPriceInput | null) {
         await mockDelay(null, 250);
         return { search, refresh, locations, extras: 0, total };
       }
-      return api.get<{
-        search: number;
-        refresh: number;
-        locations: number;
-        extras: number;
-        total: number;
-      }>(`/olx/listings/${input.listing_id}/sponsored/price`, {
-        params: {
-          type: String(input.type),
-          days: String(input.days),
-          refresh_every: String(input.refresh_every),
-          locations: input.locations.join(","),
-        },
-      });
+      return api.get<OlxSponsorPrice>(
+        `/olx/accounts/${accountId}/listings/${input.listing_id}/sponsored/price`,
+        {
+          params: {
+            type: String(input.type),
+            days: String(input.days),
+            refresh_every: String(input.refresh_every),
+            locations: input.locations.join(","),
+          },
+        }
+      );
     },
-    enabled: !!input,
+    enabled: !!input && (USE_MOCKS || !!accountId),
     staleTime: 10 * 1000,
   });
 }
 
 export function useCreateSponsor() {
   const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
   return useMutation({
     mutationFn: async (input: SponsorPriceInput) => {
       if (USE_MOCKS) {
@@ -87,7 +83,7 @@ export function useCreateSponsor() {
         const price =
           (input.type === 2 ? 15 : 5) * input.days +
           (input.locations.includes("homepage") ? 40 : 0);
-        const created: MockSponsoredListing = {
+        const created: OlxSponsorship = {
           id: nextSponsorId++,
           listing_id: input.listing_id,
           account_id: 1,
@@ -102,7 +98,11 @@ export function useCreateSponsor() {
         sponsored = [created, ...sponsored];
         return mockDelay(created);
       }
-      return api.post(`/olx/listings/${input.listing_id}/sponsored`, input);
+      if (!accountId) throw new Error("Nema aktivnog OLX profila.");
+      return api.post<OlxSponsorship>(
+        `/olx/accounts/${accountId}/listings/${input.listing_id}/sponsored`,
+        input
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sponsored"] }),
   });
@@ -131,10 +131,11 @@ interface DiscountInput {
 
 export function useCreateDiscount() {
   const queryClient = useQueryClient();
+  const accountId = useResolvedAccountId();
   return useMutation({
     mutationFn: async (input: DiscountInput) => {
       if (USE_MOCKS) {
-        const created: MockDiscount = {
+        const created: OlxDiscount = {
           id: nextDiscountId++,
           listing_id: input.listing_id,
           account_id: 1,
@@ -147,7 +148,11 @@ export function useCreateDiscount() {
         discounts = [created, ...discounts];
         return mockDelay(created);
       }
-      return api.post(`/olx/listings/${input.listing_id}/discount`, input);
+      if (!accountId) throw new Error("Nema aktivnog OLX profila.");
+      return api.post<OlxDiscount>(
+        `/olx/accounts/${accountId}/listings/${input.listing_id}/discount`,
+        input
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["discounts"] }),
   });

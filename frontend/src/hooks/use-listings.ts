@@ -21,7 +21,7 @@ const mockListingsStore: (OlxListing & { account_id: number })[] = [...mockListi
  * backend routes. Falls back to the first account when none is active yet
  * (e.g. hard refresh on a detail page).
  */
-function useResolvedAccountId(): number | null {
+export function useResolvedAccountId(): number | null {
   const { account } = useActiveAccount();
   const accountsQuery = useOlxAccounts();
   return account?.id ?? accountsQuery.data?.[0]?.id ?? null;

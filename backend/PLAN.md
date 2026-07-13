@@ -10,7 +10,7 @@ The goal is a **unidirectional WooCommerce → OLX sync engine** with per-user m
 
 ## Status (updated 2026-07-12)
 
-Done so far — each slice ships with MockMvc + Testcontainers integration tests (143 passing):
+Done so far — each slice ships with MockMvc + Testcontainers integration tests (176 passing):
 
 1. ✅ **Bootstrap** — Maven, Spring Boot 4.0.6, Flyway, Testcontainers setup. *Leftovers:* no `Dockerfile`, no `backend` service in root `docker-compose.yml`, no actuator/healthcheck, no `dev`/`prod` profiles, virtual threads not enabled.
 2. ✅ **Auth** (commit `4861884`) — `POST /auth/register` (201), `POST /auth/login`, `GET /auth/me`; BCrypt; `JwtAuthenticationFilter` + `SecurityConfig` (stateless, CORS for `http://localhost:3000`, JSON 401 entry point `{"detail": "Not authenticated"}`).
@@ -66,7 +66,17 @@ Done so far — each slice ships with MockMvc + Testcontainers integration tests
    - **Engine resolution** per category attribute: auto-match Woo product attribute (label/name vs display_name/name, value vs options, case/diacritic-insensitive with a manual đ→d map — đ has no NFD decomposition) → mapping default → required-with-no-value skips *before* any OLX call ("set a default on the category mapping"), optional omitted. Plugin per-product attrs now mapped (`WooProductAttributeDto`: `name` = taxonomy, `label` = human, `options` = values).
    - **Mapping dialog** got a 4-level cascading OLX category picker (top-level-only select was a dead end — attribute-bearing categories are leaves 3+ levels deep; the listing form still has the old 2-level picker, worth aligning later), renders one field per attribute (select for option-bearing, text otherwise), blocks save until required defaults are set, edit action (pencil) reuses the dialog with a `PUT`; defaults count badge in the table.
 
-**Next: steps 11+** — Sponsored/discounts/limits endpoints, analytics (derivable from `sync_logs` + listing counts), frontend mock cutover (`USE_MOCKS=false` default). Also worth folding in: the listing form's category picker only goes 2 levels deep (mappings dialog now does 4) and bootstrap leftovers (Dockerfile, backend in docker-compose, actuator healthcheck).
+10. ✅ **Sponsored + discounts + limits** (step 11 of the implementation order) — OLX proxy for quotes/limits + **DB tracking** for the lists (V6: `sponsorships`, `discounts`); live-verified free ops only.
+   - **Probe findings (July 2026)**: OLX has **no list endpoints** for sponsorships/discounts (`/sponsored`, `/discounts`, `/users/{uid}/sponsored` … all 404; GET on the `sponsore`/`discount` paths → 500). Listings *do* carry markers (`sponsored: 0|1`, `has_discount`, `discounted_price_float` on list items and single GETs) — no days/price/ends-at though, so rows created through AutoVendor are tracked in our DB; the markers are a future reconciliation hook. Sponsorships/discounts made directly on olx.ba stay invisible to us (documented limitation).
+   - **Pinned live shapes**: `/listing-limits` deviates from the docs — `{"data":{"cars"|"real-estate"|"car-parts"|"other":{"limit","unlimited","listings"}}}` (hyphenated keys, extra `car-parts` category, `listings` not `used`); mapper is JsonNode-based, tolerant (missing keys → zeros + WARN), drops `car-parts`, ignores `unlimited`. `/listing/refresh/limits` is flat, no envelope, matches docs. **Sponsor price quote requires Laravel array notation `locations[]=homepage`** — plain `locations=` 422s with "Zona treba biti niz"; response is flat with extra fields (`total_without_discount`, `discount`, `discount_percentage`).
+   - **Routes** (deviates from the earlier contract sketch): lists are **user-wide** (`GET /olx/sponsored`, `GET /olx/discounts` — the Sponzorstva page has no account picker; rows carry `account_id`), end-ops are **row-scoped** (`DELETE /olx/sponsored/{id}`, `POST /olx/discounts/{id}/finish` — the row knows its account), quote/create/limits are account-path-scoped (`/olx/accounts/{accountId}/listings/{listingId}/sponsored[/price]`, `…/discount`, `…/listing-limits`, `…/listing/refresh/limits`).
+   - **Row lifecycle**: active = `ended_at IS NULL AND ends_at > now()`; natural expiry needs no job; create supersedes active rows for the same listing; ended rows are kept (history feeds step-12 analytics). Sponsor create quotes the price first (free) and stores `price_total` from the quote — the `sponsore` POST response is undocumented and only logged at INFO (never run live: charges credits).
+   - ⚠️ **Sponsor cancel is a type-0 re-POST — UNVERIFIED live** (no delete endpoint documented; a real test would require paying for a sponsorship). Deliberately lenient: upstream 4xx still ends the row (never stuck in the UI), 5xx/connectivity keeps it. Discount finish is the opposite (documented + live-verified): 4xx propagates, row stays.
+   - Validation (400 before any OLX call): sponsor `type ∈ {1,2}`, `days ∈ {1,2,3,5,7,14,21,30}`, `refresh_every ∈ {0,3,6,8,24}`, locations restricted to `[a-z0-9_-]+` (they go into the OLX query string unencoded); discount `days ∈ {3,7,30}`, prices > 0, discount < original.
+   - **Live verification**: limits + quotes through the new endpoints matched the probe raw JSON; full discount cycle on real listing 77163754 (500 → 480 KM, `has_discount: true` + "480 KM" on the public API/page → finish → restored to 500, row left the active list). Hibernate gotcha: `SMALLINT` column vs `Integer` field fails schema validation — use `INT`.
+   - Frontend: `use-sponsored.ts` mutations/quote moved to the account-scoped paths (via `useResolvedAccountId`, now exported from `use-listings.ts`); `use-listing-limits.ts` path-scoped; `MockSponsoredListing`/`MockDiscount` promoted to `OlxSponsorship`/`OlxDiscount`/`OlxSponsorPrice` in `types/olx.ts`; **sponsor-dialog offered OLX-invalid values** (days 15, refresh 1/12, default refresh "1") — fixed to the real OLX sets.
+
+**Next: steps 12+** — Analytics endpoints (derivable from `sync_logs` + the new sponsorships/discounts tables + listing counts), frontend mock cutover (`USE_MOCKS=false` default). Also worth folding in: the listing form's category picker only goes 2 levels deep (mappings dialog now does 4) and bootstrap leftovers (Dockerfile, backend in docker-compose, actuator healthcheck).
 
 ---
 
@@ -117,8 +127,8 @@ backend/
     │   ├── listing/         ✅ ListingController (path-scoped), AllListingsController, ListingService, ListingMapper, dto/
     │   ├── category/        ✅ CategoryController, CategoryService (Redis-cached, 24h), CategoryMapper, dto/
     │   ├── location/        ✅ LocationController, LocationService (Redis-cached, 7d), dto/
-    │   ├── sponsor/         SponsorController, DiscountController
-    │   └── limit/           LimitController
+    │   ├── sponsor/         ✅ Sponsorship/Discount entities+repos, Sponsor/DiscountController+Service, mappers, dto/
+    │   └── limit/           ✅ LimitController, LimitService, LimitMapper (defensive JsonNode mapping), dto/
     ├── woo/
     │   ├── store/           ✅ WooStore entity, StoreController, StoreService, WooStoreRepository/Mapper, dto/
     │   ├── client/          ✅ WooPluginClient (RestClient, X-AutoVendor-API-Key), dto/
@@ -175,7 +185,7 @@ The frontend currently passes `account_id` as a query/body field. The backend wi
 - Ownership checks: the accounts CRUD (done) uses **repository-scoped queries** (`findByIdAndUserId`) and returns **404** for other users' resources — this hides existence and needs no aspect. Keep the same pattern for nested resources: resolve `{accountId}` through `findByIdAndUserId` at the top of the service method (404 if not owned) instead of a separate `@AccountOwned` aspect, unless duplication grows.
 - WooCommerce store scoping mirrors this: `/woo/stores/{storeId}/...`.
 
-> **Frontend follow-up**: ✅ `use-listings` switched to path-param scoping (mutations resolve the active account internally via `useActiveAccount`, persisted in localStorage, with first-account fallback). Still pending when their slices land: `use-listing-limits`, `use-listing-stats`, `use-sponsored`. ✅ `use-woo-stores` was already path-scoped; its detail-page test now uses `POST /woo/stores/{id}/test` (new `useTestWooStoreConnection`).
+> **Frontend follow-up**: ✅ `use-listings` switched to path-param scoping (mutations resolve the active account internally via `useActiveAccount`, persisted in localStorage, with first-account fallback). ✅ `use-sponsored` + `use-listing-limits` migrated in step 10. Still pending when its slice lands: `use-listing-stats` (analytics). ✅ `use-woo-stores` was already path-scoped; its detail-page test now uses `POST /woo/stores/{id}/test` (new `useTestWooStoreConnection`).
 
 ---
 
@@ -216,16 +226,16 @@ Grouped to mirror frontend hooks. All under `Authorization: Bearer <jwt>` unless
 - `GET /locations/cantons` — `{id, name, state_id}[]` (flattened from `/country-states`; no standalone OLX endpoint)
 - `GET /locations/cities` — `{id, name, zip_code: null, latitude, longitude, canton_id, state_id}[]` (flattened from the `/cities` tree; bulk zip codes aren't available upstream and the frontend doesn't display them)
 
-### Sponsoring & discounts (`/olx/accounts/{accountId}`)
-- `GET    .../sponsored`
-- `GET    .../discounts`
-- `GET    .../listings/{id}/sponsored/price` — `?type&days&refresh_every&locations`
-- `POST   .../listings/{id}/sponsored`
-- `DELETE .../sponsored/{id}`
-- `POST   .../listings/{id}/discount`
-- `POST   .../discounts/{id}/finish`
+### Sponsoring & discounts ✅ (lists user-wide, end-ops row-scoped — see step 10 notes)
+- `GET    /olx/sponsored` — user-wide, active tracking rows
+- `GET    /olx/discounts` — user-wide, active tracking rows
+- `GET    /olx/accounts/{accountId}/listings/{id}/sponsored/price` — `?type&days&refresh_every&locations` (comma-joined; backend splits and sends `locations[]=` to OLX)
+- `POST   /olx/accounts/{accountId}/listings/{id}/sponsored` → 201 tracking row
+- `DELETE /olx/sponsored/{id}` → 204 (`id` = tracking-row id; type-0 cancel on OLX, unverified)
+- `POST   /olx/accounts/{accountId}/listings/{id}/discount` → 201 tracking row
+- `POST   /olx/discounts/{id}/finish` (`id` = tracking-row id)
 
-### Limits (`/olx/accounts/{accountId}`)
+### Limits ✅ (`/olx/accounts/{accountId}`)
 - `GET .../listing-limits`
 - `GET .../listing/refresh/limits`
 
@@ -376,7 +386,7 @@ Response shape `{detail: string}` matches what the frontend's `api-client.ts` al
 8. **Sync engine**: full sync flow, hash comparison, image pipeline.
 9. **Webhook receiver** + webhook-triggered sync path.
 10. **Background jobs**: `@Scheduled` full sync, stock sync, token refresh.
-11. **Sponsored + discounts + limits**.
+11. ✅ **Sponsored + discounts + limits**.
 12. **Analytics endpoints** (initially can be derived from `sync_logs` + listings counts).
 13. **Frontend cutover**: flip `USE_MOCKS=false`, update hooks for path-based scoping.
 

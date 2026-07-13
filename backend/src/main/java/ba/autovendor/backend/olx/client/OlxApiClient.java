@@ -10,6 +10,8 @@ import ba.autovendor.backend.olx.client.dto.OlxImageDto;
 import ba.autovendor.backend.olx.client.dto.OlxListingDto;
 import ba.autovendor.backend.olx.client.dto.OlxListingPageDto;
 import ba.autovendor.backend.olx.client.dto.OlxNamedDto;
+import ba.autovendor.backend.olx.client.dto.OlxRefreshLimitsDto;
+import ba.autovendor.backend.olx.client.dto.OlxSponsorPriceDto;
 import ba.autovendor.backend.olx.client.dto.OlxStateDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -34,6 +37,9 @@ import java.util.function.Supplier;
 public class OlxApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(OlxApiClient.class);
+
+    /** Laravel array notation — required by the sponsor price endpoint (see getSponsorPrice). */
+    private static final String LOCATIONS_PARAM = "locations[]";
 
     private static final ParameterizedTypeReference<DataEnvelope<OlxCategoryDto>> CATEGORIES =
             new ParameterizedTypeReference<>() {
@@ -252,6 +258,87 @@ public class OlxApiClient {
                 .body(Map.of("imageId", imageId))
                 .retrieve()
                 .toBodilessEntity());
+    }
+
+    /**
+     * Quote for sponsoring a listing (free). OLX requires the Laravel array
+     * notation {@code locations[]=} — a plain {@code locations=} 422s with
+     * "Zona treba biti niz" (pinned live July 2026). Values are validated
+     * upstream to simple tokens, so they are appended unencoded.
+     */
+    public OlxSponsorPriceDto getSponsorPrice(String token, long listingId, int type, int days,
+                                              int refreshEvery, List<String> locations) {
+        StringBuilder uri = new StringBuilder("/listings/" + listingId + "/sponsore/price"
+                + "?type=" + type + "&days=" + days + "&refresh_every=" + refreshEvery);
+        for (String location : locations) {
+            uri.append('&').append(LOCATIONS_PARAM).append('=').append(location);
+        }
+        return unwrap(exchange(() -> restClient.get()
+                .uri(uri.toString())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .body(JsonNode.class)), OlxSponsorPriceDto.class);
+    }
+
+    /** POST /listings/{id}/sponsore (OLX spelling). Charges OLX credits. Response shape is undocumented. */
+    public JsonNode sponsorListing(String token, long listingId, int type, int days,
+                                   int refreshEvery, List<String> locations) {
+        return exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/sponsore")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of(
+                        "type", type,
+                        "days", days,
+                        "refresh_every", refreshEvery,
+                        "locations", locations
+                ))
+                .retrieve()
+                .body(JsonNode.class));
+    }
+
+    /**
+     * OLX documents no delete-sponsor endpoint; type 0 is documented as "no
+     * sponsoring", so a re-POST with it is our cancel. UNVERIFIED live (a real
+     * cancel test would first require paying for a sponsorship).
+     */
+    public void cancelSponsorship(String token, long listingId) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/sponsore")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of("type", 0))
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    /** OLX takes only the new (discounted) price; the original stays on the listing itself. */
+    public void createDiscount(String token, long listingId, BigDecimal price, int days) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/discount")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(Map.of("price", price, "days", days))
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    public void finishDiscount(String token, long listingId) {
+        exchange(() -> restClient.post()
+                .uri("/listings/" + listingId + "/discount/finish")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    /**
+     * Raw node because the live shape differs from the docs (pinned July 2026):
+     * {"data": {"cars"|"real-estate"|"car-parts"|"other": {limit, unlimited, listings}}}.
+     * The mapper in olx/limit tolerates drift instead of failing here.
+     */
+    public JsonNode getListingLimits(String token) {
+        return authGet("/listing-limits", token, JsonNode.class);
+    }
+
+    public OlxRefreshLimitsDto getRefreshLimits(String token) {
+        return authGet("/listing/refresh/limits", token, OlxRefreshLimitsDto.class);
     }
 
     private void actionPost(String token, long listingId, String action) {

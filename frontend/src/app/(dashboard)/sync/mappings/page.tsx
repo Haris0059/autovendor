@@ -417,7 +417,7 @@ export default function CategoryMappingsPage() {
                   </div>
                 )}
                 {!suggestions.isFetching && (suggestions.data ?? []).length > 0 && (
-                  <div className="grid gap-1">
+                  <div className="grid max-h-44 gap-1 overflow-y-auto pr-1">
                     {suggestions.data!.map((s) => (
                       <button
                         type="button"

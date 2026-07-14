@@ -87,7 +87,7 @@ export default function CategoryMappingsPage() {
   const [attrDefaults, setAttrDefaults] = useState<Record<string, string>>({})
   // OLX's own keyword→category suggester; a clicked suggestion selects the OLX
   // category directly, the cascade below stays as the manual fallback.
-  const [suggestedOlxCat, setSuggestedOlxCat] = useState<{ id: number; name: string } | null>(null)
+  const [suggestedOlxCat, setSuggestedOlxCat] = useState<{ id: number; name: string; path?: string } | null>(null)
   const [keyword, setKeyword] = useState("")
   const debouncedKeyword = useDebouncedValue(keyword)
   const suggestions = useCategorySuggestions(isAddOpen ? debouncedKeyword : "")
@@ -125,8 +125,8 @@ export default function CategoryMappingsPage() {
     setAttrDefaults({})
   }
 
-  const pickSuggestion = (s: { id: number; name: string }) => {
-    setSuggestedOlxCat({ id: s.id, name: s.name })
+  const pickSuggestion = (s: { id: number; name: string; path?: string }) => {
+    setSuggestedOlxCat({ id: s.id, name: s.name, path: s.path })
     setCatPath([null, null, null, null])
     setAttrDefaults({})
   }
@@ -454,37 +454,61 @@ export default function CategoryMappingsPage() {
                   )}
               </div>
 
-              {levels.map((level, i) => {
-                const options = level.data ?? []
-                if (i > 0 && (!catPath[i - 1] || options.length === 0)) return null
-                return (
-                  <Select
-                    key={i}
-                    items={options.map((c) => ({ value: c.id.toString(), label: c.name }))}
-                    value={catPath[i]?.id.toString() ?? ""}
-                    onValueChange={(v) => selectCategoryAt(i, v)}
+              {suggestedOlxCat && !deepestSelected ? (
+                <div className="flex items-center justify-between gap-2 rounded-md border border-primary/50 bg-primary/5 px-3 py-2">
+                  <div className="min-w-0 text-sm">
+                    <span className="block truncate font-medium">{suggestedOlxCat.name}</span>
+                    {suggestedOlxCat.path && (
+                      <span className="block truncate text-[10px] text-muted-foreground">
+                        {suggestedOlxCat.path}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setSuggestedOlxCat(null)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        level.isLoading ? "Učitavanje..." :
-                        i === 0 ? "Odaberi kategoriju" : "Odaberi podkategoriju (opciono)"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map(c => (
-                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )
-              })}
-              <p className="text-[10px] text-muted-foreground">
-                Napomena: Preporučujemo mapiranje do najnižih podkategorija radi tačnijih atributa.
-              </p>
-              {effectiveOlxCat && (
-                <p className="text-xs">
-                  Odabrano: <span className="font-medium">{effectiveOlxCat.name}</span>
-                </p>
+                    Promijeni
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {levels.map((level, i) => {
+                    const options = level.data ?? []
+                    if (i > 0 && (!catPath[i - 1] || options.length === 0)) return null
+                    return (
+                      <Select
+                        key={i}
+                        items={options.map((c) => ({ value: c.id.toString(), label: c.name }))}
+                        value={catPath[i]?.id.toString() ?? ""}
+                        onValueChange={(v) => selectCategoryAt(i, v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            level.isLoading ? "Učitavanje..." :
+                            i === 0 ? "Odaberi kategoriju" : "Odaberi podkategoriju (opciono)"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {options.map(c => (
+                            <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )
+                  })}
+                  <p className="text-[10px] text-muted-foreground">
+                    Napomena: Preporučujemo mapiranje do najnižih podkategorija radi tačnijih atributa.
+                  </p>
+                  {effectiveOlxCat && (
+                    <p className="text-xs">
+                      Odabrano: <span className="font-medium">{effectiveOlxCat.name}</span>
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

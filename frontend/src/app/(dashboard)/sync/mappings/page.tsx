@@ -9,12 +9,10 @@ import {
 } from "@/hooks/use-sync"
 import { useWooStores, useWooStoreCategories } from "@/hooks/use-woo-stores"
 import {
-  useOlxCategories,
   useCategoryAttributes,
   useCategorySuggestions,
 } from "@/hooks/use-categories"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
-import { cn } from "@/lib/utils"
 import type { CategoryMapping } from "@/types/sync"
 import {
   Card,
@@ -81,26 +79,14 @@ export default function CategoryMappingsPage() {
 
   // Form state
   const [wooCatId, setWooCatId] = useState("")
-  // OLX category drill-down: one selection per level, deepest selection wins.
-  // OLX nests categories 3-4 deep; attribute-bearing categories are leaves.
-  const [catPath, setCatPath] = useState<({ id: number; name: string } | null)[]>([null, null, null, null])
   const [attrDefaults, setAttrDefaults] = useState<Record<string, string>>({})
-  // OLX's own keyword→category suggester; a clicked suggestion selects the OLX
-  // category directly, the cascade below stays as the manual fallback.
+  // OLX category is chosen from OLX's own keyword→category suggester.
   const [suggestedOlxCat, setSuggestedOlxCat] = useState<{ id: number; name: string; path?: string } | null>(null)
   const [keyword, setKeyword] = useState("")
   const debouncedKeyword = useDebouncedValue(keyword)
   const suggestions = useCategorySuggestions(isAddOpen ? debouncedKeyword : "")
 
-  const level1 = useOlxCategories()
-  const level2 = useOlxCategories(catPath[0]?.id)
-  const level3 = useOlxCategories(catPath[1]?.id)
-  const level4 = useOlxCategories(catPath[2]?.id)
-  const levels = [level1, level2, level3, level4]
-
-  const deepestSelected = [...catPath].reverse().find(Boolean) ?? null
-  const effectiveOlxCat = deepestSelected
-    ?? suggestedOlxCat
+  const effectiveOlxCat = suggestedOlxCat
     ?? (editingMapping
       ? { id: editingMapping.olx_category_id, name: editingMapping.olx_category_name }
       : null)
@@ -112,29 +98,14 @@ export default function CategoryMappingsPage() {
     (a) => a.required && !attrDefaults[a.name]?.trim()
   )
 
-  const selectCategoryAt = (level: number, value: string | null) => {
-    const options = levels[level].data ?? []
-    const chosen = options.find((c) => c.id.toString() === value) ?? null
-    setCatPath((prev) => {
-      const next = [...prev]
-      next[level] = chosen
-      for (let i = level + 1; i < next.length; i++) next[i] = null
-      return next
-    })
-    setSuggestedOlxCat(null)
-    setAttrDefaults({})
-  }
-
   const pickSuggestion = (s: { id: number; name: string; path?: string }) => {
     setSuggestedOlxCat({ id: s.id, name: s.name, path: s.path })
-    setCatPath([null, null, null, null])
     setAttrDefaults({})
   }
 
   const openAdd = () => {
     setEditingMapping(null)
     setWooCatId("")
-    setCatPath([null, null, null, null])
     setAttrDefaults({})
     setSuggestedOlxCat(null)
     setKeyword("")
@@ -144,7 +115,6 @@ export default function CategoryMappingsPage() {
   const openEdit = (mapping: CategoryMapping) => {
     setEditingMapping(mapping)
     setWooCatId(mapping.woo_category_id.toString())
-    setCatPath([null, null, null, null])
     setAttrDefaults(mapping.attribute_defaults ?? {})
     setSuggestedOlxCat(null)
     setKeyword(mapping.woo_category_name)
@@ -393,112 +363,81 @@ export default function CategoryMappingsPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label>OLX Kategorija</Label>
-              {editingMapping && !deepestSelected && !suggestedOlxCat && (
-                <p className="text-xs text-muted-foreground">
-                  Trenutno: <span className="font-medium text-foreground">{editingMapping.olx_category_name}</span> — odaberite ispod da promijenite.
-                </p>
-              )}
+              <Label htmlFor="olx-keyword">OLX Kategorija</Label>
+              <Input
+                id="olx-keyword"
+                placeholder="Pretraži OLX kategoriju (npr. dijamantski kroneri)"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+              />
 
-              <div className="grid gap-1.5 rounded-md border bg-muted/30 p-2.5">
-                <Label htmlFor="olx-keyword" className="text-xs font-normal text-muted-foreground">
-                  Prijedlozi na osnovu ključne riječi (OLX pretraga)
-                </Label>
-                <Input
-                  id="olx-keyword"
-                  placeholder="npr. dijamantski kroneri"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                />
-                {suggestions.isFetching && (
-                  <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-                    <Loader2Icon className="size-3 animate-spin" />
-                    Tražim prijedloge...
-                  </div>
-                )}
-                {!suggestions.isFetching && (suggestions.data ?? []).length > 0 && (
-                  <div className="grid max-h-44 gap-1 overflow-y-auto pr-1">
-                    {suggestions.data!.map((s) => (
-                      <button
-                        type="button"
-                        key={s.id}
-                        onClick={() => pickSuggestion(s)}
-                        className={cn(
-                          "flex items-center justify-between gap-2 rounded-md border bg-background px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted",
-                          suggestedOlxCat?.id === s.id && !deepestSelected &&
-                            "border-primary ring-1 ring-primary"
-                        )}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{s.name}</span>
-                          {s.path && (
-                            <span className="block truncate text-[10px] text-muted-foreground">
-                              {s.path}
-                            </span>
-                          )}
-                        </span>
-                        <Badge variant="secondary" className="shrink-0 text-[10px]">
-                          {s.count}
-                        </Badge>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!suggestions.isFetching &&
-                  debouncedKeyword.trim().length >= 2 &&
-                  (suggestions.data ?? []).length === 0 &&
-                  suggestions.isFetched && (
-                    <p className="py-1 text-xs text-muted-foreground">
-                      Nema prijedloga — odaberite kategoriju ručno ispod.
-                    </p>
-                  )}
-              </div>
-
-              {levels.map((level, i) => {
-                const options = level.data ?? []
-                if (i > 0 && (!catPath[i - 1] || options.length === 0)) return null
-                return (
-                  <Select
-                    key={i}
-                    items={options.map((c) => ({ value: c.id.toString(), label: c.name }))}
-                    value={catPath[i]?.id.toString() ?? ""}
-                    onValueChange={(v) => selectCategoryAt(i, v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        level.isLoading ? "Učitavanje..." :
-                        i === 0 ? "Odaberi kategoriju ručno" : "Odaberi podkategoriju (opciono)"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map(c => (
-                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )
-              })}
-              <p className="text-[10px] text-muted-foreground">
-                Napomena: Preporučujemo mapiranje do najnižih podkategorija radi tačnijih atributa.
-              </p>
-              {effectiveOlxCat && (
+              {effectiveOlxCat ? (
                 <div className="flex items-center justify-between gap-2 rounded-md border border-primary/50 bg-primary/5 px-3 py-2">
                   <div className="min-w-0 text-sm">
                     <span className="text-[10px] text-muted-foreground">Odabrana OLX kategorija</span>
                     <span className="block truncate font-medium">{effectiveOlxCat.name}</span>
+                    {suggestedOlxCat?.path && (
+                      <span className="block truncate text-[10px] text-muted-foreground">
+                        {suggestedOlxCat.path}
+                      </span>
+                    )}
                   </div>
-                  {suggestedOlxCat && !deepestSelected && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={() => setSuggestedOlxCat(null)}
-                    >
-                      Poništi
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setSuggestedOlxCat(null)}
+                  >
+                    Promijeni
+                  </Button>
                 </div>
+              ) : (
+                <>
+                  {suggestions.isFetching && (
+                    <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+                      <Loader2Icon className="size-3 animate-spin" />
+                      Tražim prijedloge...
+                    </div>
+                  )}
+                  {!suggestions.isFetching && (suggestions.data ?? []).length > 0 && (
+                    <div className="grid max-h-56 gap-1 overflow-y-auto pr-1">
+                      {suggestions.data!.map((s) => (
+                        <button
+                          type="button"
+                          key={s.id}
+                          onClick={() => pickSuggestion(s)}
+                          className="flex items-center justify-between gap-2 rounded-md border bg-background px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{s.name}</span>
+                            {s.path && (
+                              <span className="block truncate text-[10px] text-muted-foreground">
+                                {s.path}
+                              </span>
+                            )}
+                          </span>
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            {s.count}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!suggestions.isFetching &&
+                    debouncedKeyword.trim().length >= 2 &&
+                    (suggestions.data ?? []).length === 0 &&
+                    suggestions.isFetched && (
+                      <p className="py-1 text-xs text-muted-foreground">
+                        Nema prijedloga za &quot;{debouncedKeyword}&quot; — pokušajte drugu ključnu riječ.
+                      </p>
+                    )}
+                  {debouncedKeyword.trim().length < 2 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Upišite naziv proizvoda ili kategorije da vidite OLX prijedloge.
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

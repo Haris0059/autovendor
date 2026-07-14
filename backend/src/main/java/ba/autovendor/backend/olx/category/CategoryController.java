@@ -2,10 +2,12 @@ package ba.autovendor.backend.olx.category;
 
 import ba.autovendor.backend.olx.category.dto.AttributeResponse;
 import ba.autovendor.backend.olx.category.dto.CategoryResponse;
+import ba.autovendor.backend.olx.category.dto.CategorySuggestionResponse;
 import ba.autovendor.backend.olx.category.dto.NamedResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,6 +25,12 @@ public class CategoryController {
     @GetMapping
     public List<CategoryResponse> topCategories() {
         return categoryService.getTopCategories();
+    }
+
+    // Literal path — takes precedence over the /{parentId} template.
+    @GetMapping("/suggest")
+    public List<CategorySuggestionResponse> suggest(@RequestParam String keyword) {
+        return categoryService.getSuggestions(keyword);
     }
 
     @GetMapping("/{parentId}")

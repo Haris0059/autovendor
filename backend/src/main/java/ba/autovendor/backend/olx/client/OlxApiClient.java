@@ -5,6 +5,7 @@ import ba.autovendor.backend.common.OlxApiException;
 import ba.autovendor.backend.common.OlxAuthException;
 import ba.autovendor.backend.olx.client.dto.OlxAttributeDto;
 import ba.autovendor.backend.olx.client.dto.OlxCategoryDto;
+import ba.autovendor.backend.olx.client.dto.OlxCategorySuggestionDto;
 import ba.autovendor.backend.olx.client.dto.OlxCountryDto;
 import ba.autovendor.backend.olx.client.dto.OlxImageDto;
 import ba.autovendor.backend.olx.client.dto.OlxListingDto;
@@ -29,6 +30,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -48,6 +51,9 @@ public class OlxApiClient {
             new ParameterizedTypeReference<>() {
             };
     private static final ParameterizedTypeReference<DataEnvelope<OlxNamedDto>> NAMED =
+            new ParameterizedTypeReference<>() {
+            };
+    private static final ParameterizedTypeReference<DataEnvelope<OlxCategorySuggestionDto>> SUGGESTIONS =
             new ParameterizedTypeReference<>() {
             };
     private static final ParameterizedTypeReference<DataEnvelope<OlxCountryDto>> COUNTRIES =
@@ -109,6 +115,11 @@ public class OlxApiClient {
 
     public List<OlxAttributeDto> getCategoryAttributes(long categoryId) {
         return get("/categories/" + categoryId + "/attributes", ATTRIBUTES);
+    }
+
+    public List<OlxCategorySuggestionDto> getCategorySuggestions(String keyword) {
+        return get("/categories/suggest?keyword=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8),
+                SUGGESTIONS);
     }
 
     public List<OlxNamedDto> getCategoryBrands(long categoryId) {

@@ -6,6 +6,7 @@ import ba.autovendor.backend.olx.client.OlxApiClient;
 import ba.autovendor.backend.olx.client.dto.OlxAttributeDto;
 import ba.autovendor.backend.olx.client.dto.OlxCantonDto;
 import ba.autovendor.backend.olx.client.dto.OlxCategoryDto;
+import ba.autovendor.backend.olx.client.dto.OlxCategorySuggestionDto;
 import ba.autovendor.backend.olx.client.dto.OlxCityDto;
 import ba.autovendor.backend.olx.client.dto.OlxCountryDto;
 import ba.autovendor.backend.olx.client.dto.OlxLocationDto;
@@ -200,6 +201,45 @@ class OlxCatalogIntegrationTest {
                 .andExpect(status().isOk());
 
         verify(olxApiClient, times(1)).getCountryStates();
+    }
+
+    @Test
+    void suggestionsAreMappedWithRootFirstPath() throws Exception {
+        when(olxApiClient.getCategorySuggestions("dijamantski kroneri")).thenReturn(List.of(
+                new OlxCategorySuggestionDto(1955L, 201L, "Kroneri/Glodala",
+                        List.of("Mašine i alati", "Biznis i Industrija")),
+                new OlxCategorySuggestionDto(1179L, 5L, "Za obradu keramike i stakla",
+                        List.of("Mašine i alati", "Biznis i Industrija"))));
+
+        mockMvc.perform(get("/olx/categories/suggest?keyword=dijamantski kroneri")
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1955))
+                .andExpect(jsonPath("$[0].name").value("Kroneri/Glodala"))
+                .andExpect(jsonPath("$[0].count").value(201))
+                .andExpect(jsonPath("$[0].path").value("Biznis i Industrija > Mašine i alati"))
+                .andExpect(jsonPath("$[1].id").value(1179));
+    }
+
+    @Test
+    void suggestionsRequireKeywordAndAuthentication() throws Exception {
+        mockMvc.perform(get("/olx/categories/suggest").header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Missing required parameter 'keyword'"));
+
+        mockMvc.perform(get("/olx/categories/suggest?keyword=alati"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void suggestionsUpstreamFailureReturns502() throws Exception {
+        when(olxApiClient.getCategorySuggestions("alati"))
+                .thenThrow(new OlxApiException("OLX API is unreachable"));
+
+        mockMvc.perform(get("/olx/categories/suggest?keyword=alati")
+                        .header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isBadGateway());
     }
 
     @Test

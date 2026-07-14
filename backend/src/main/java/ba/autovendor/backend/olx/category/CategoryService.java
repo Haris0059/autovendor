@@ -2,6 +2,7 @@ package ba.autovendor.backend.olx.category;
 
 import ba.autovendor.backend.olx.category.dto.AttributeResponse;
 import ba.autovendor.backend.olx.category.dto.CategoryResponse;
+import ba.autovendor.backend.olx.category.dto.CategorySuggestionResponse;
 import ba.autovendor.backend.olx.category.dto.NamedResponse;
 import ba.autovendor.backend.olx.client.OlxApiClient;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,6 +36,12 @@ public class CategoryService {
     @Cacheable(cacheNames = "olx-categories", key = "'attributes:' + #categoryId")
     public List<AttributeResponse> getAttributes(long categoryId) {
         return olxApiClient.getCategoryAttributes(categoryId).stream().map(CategoryMapper::toResponse).collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    // Deliberately uncached: the keyword space is unbounded (24h TTL entries
+    // would pile up in Redis) and the upstream call is a cheap public GET.
+    public List<CategorySuggestionResponse> getSuggestions(String keyword) {
+        return olxApiClient.getCategorySuggestions(keyword).stream().map(CategoryMapper::toResponse).toList();
     }
 
     @Cacheable(cacheNames = "olx-categories", key = "'brands:' + #categoryId")

@@ -62,8 +62,11 @@ class ApiClient {
       throw new ApiError(response.status, message);
     }
 
+    // Action endpoints (hide/unhide/refresh/finish…) reply 200 with an empty
+    // body — parse only when there is something to parse.
     if (response.status === 204) return undefined as T;
-    return response.json();
+    const text = await response.text();
+    return text ? (JSON.parse(text) as T) : (undefined as T);
   }
 
   get<T>(endpoint: string, options?: RequestOptions) {

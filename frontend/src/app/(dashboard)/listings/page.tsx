@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
@@ -8,7 +8,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { BulkActionBar } from "@/components/listings/bulk-action-bar"
 import { ListingsTable } from "@/components/listings/listings-table"
 import { ListingsToolbar } from "@/components/listings/listings-toolbar"
-import { useActiveAccount } from "@/hooks/use-active-account"
+import { useActiveAccount, useActiveAccountSync } from "@/hooks/use-active-account"
 import { useListings } from "@/hooks/use-listings"
 import { useOlxAccounts } from "@/hooks/use-olx-accounts"
 
@@ -36,12 +36,9 @@ export default function ListingsPage() {
   const [perPage, setPerPage] = useState("10")
   const [selectedIds, setSelectedIds] = useState<number[]>([])
 
-  // If no active account but accounts have loaded, default to the first one.
-  useEffect(() => {
-    if (!activeAccount && accounts.length > 0) {
-      setAccount(accounts[0])
-    }
-  }, [activeAccount, accounts, setAccount])
+  // Reconcile the persisted active account against the fetched list (stale or
+  // foreign entries fall back to the first account).
+  useActiveAccountSync()
 
   const listingsQuery = useListings({
     account_id: activeAccount?.id ?? 0,

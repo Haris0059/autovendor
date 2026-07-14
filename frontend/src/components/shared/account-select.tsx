@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useActiveAccount } from "@/hooks/use-active-account";
+import { useActiveAccount, useActiveAccountSync } from "@/hooks/use-active-account";
 import { useOlxAccounts } from "@/hooks/use-olx-accounts";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ export function AccountSelect({
 }: AccountSelectProps) {
   const { data: accounts = [] } = useOlxAccounts();
   const { account, setAccount } = useActiveAccount();
+  useActiveAccountSync();
 
   const value = account ? String(account.id) : "";
 

@@ -24,7 +24,13 @@ const mockListingsStore: (OlxListing & { account_id: number })[] = [...mockListi
 export function useResolvedAccountId(): number | null {
   const { account } = useActiveAccount();
   const accountsQuery = useOlxAccounts();
-  return account?.id ?? accountsQuery.data?.[0]?.id ?? null;
+  const accounts = accountsQuery.data;
+  // Trust the persisted account until the list disproves it (stale entries can
+  // reference another user's or a mock account).
+  if (account && (!accounts || accounts.some((a) => a.id === account.id))) {
+    return account.id;
+  }
+  return accounts?.[0]?.id ?? null;
 }
 
 export function useListings(filters: ListingFilters) {

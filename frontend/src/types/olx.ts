@@ -37,6 +37,13 @@ export interface OlxCategory {
   children?: OlxCategory[];
 }
 
+export interface OlxCategorySuggestion {
+  id: number;
+  name: string;
+  count: number;
+  path: string;
+}
+
 export interface OlxCategoryAttribute {
   id: number;
   type: string;

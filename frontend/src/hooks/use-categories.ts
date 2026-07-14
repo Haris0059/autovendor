@@ -7,7 +7,11 @@ import {
   mockBrands,
   mockModels,
 } from "@/lib/mocks/categories";
-import type { OlxCategory, OlxCategoryAttribute } from "@/types/olx";
+import type {
+  OlxCategory,
+  OlxCategoryAttribute,
+  OlxCategorySuggestion,
+} from "@/types/olx";
 
 const STALE = 10 * 60 * 1000;
 
@@ -34,6 +38,39 @@ export function useOlxCategories(parentId?: number) {
         parentId ? `/olx/categories/${parentId}` : "/olx/categories"
       );
     },
+    staleTime: STALE,
+  });
+}
+
+/**
+ * OLX's own "keyword → category" suggester (public upstream endpoint) —
+ * semantic ranking based on where real listings with that keyword live.
+ */
+export function useCategorySuggestions(keyword: string) {
+  const trimmed = keyword.trim();
+  return useQuery({
+    queryKey: ["olx-categories", "suggest", trimmed],
+    queryFn: () => {
+      if (USE_MOCKS) {
+        const needle = trimmed.toLowerCase();
+        const matches = flatten(mockCategories)
+          .filter((c) => c.name.toLowerCase().includes(needle))
+          .slice(0, 8)
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            count: 10,
+            path: c.parent_id
+              ? flatten(mockCategories).find((p) => p.id === c.parent_id)?.name ?? ""
+              : "",
+          }));
+        return mockDelay(matches);
+      }
+      return api.get<OlxCategorySuggestion[]>("/olx/categories/suggest", {
+        params: { keyword: trimmed },
+      });
+    },
+    enabled: trimmed.length >= 2,
     staleTime: STALE,
   });
 }
